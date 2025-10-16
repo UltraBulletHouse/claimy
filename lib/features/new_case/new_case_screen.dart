@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:claimy/core/api/complaints_api.dart';
 
 import 'package:claimy/core/theme/app_colors.dart';
 import 'package:claimy/state/app_state.dart';
@@ -89,7 +90,7 @@ class _NewCaseScreenState extends State<NewCaseScreen> {
     }
   }
 
-  void _submit() {
+  Future<void> _submit() async {
     if (!_validateCurrentStep()) {
       return;
     }
@@ -98,14 +99,42 @@ class _NewCaseScreenState extends State<NewCaseScreen> {
         : _selectedStore!;
     final product = _productController.text.trim();
     final description = _descriptionController.text.trim();
-    context.read<AppState>().createCase(
-      storeName: store,
-      productName: product,
-      description: description,
-      includedProductPhoto: _productPhotoAdded,
-      includedReceiptPhoto: _receiptPhotoAdded,
-    );
-    Navigator.of(context).pop(true);
+
+    // Submit to backend first (no UI redesign, just wiring)
+    try {
+      final api = ComplaintsApi();
+      final images = <String>[]; // placeholders until real uploads exist
+      final result = await api.submitComplaint(
+        store: store,
+        product: product,
+        description: description.isEmpty ? null : description,
+        images: images,
+      );
+      if (result.ok) {
+        context.read<AppState>().createCase(
+          storeName: store,
+          productName: product,
+          description: description,
+          includedProductPhoto: _productPhotoAdded,
+          includedReceiptPhoto: _receiptPhotoAdded,
+        );
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Claim submitted successfully.')),
+        );
+        Navigator.of(context).pop(true);
+      } else {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(result.message ?? 'Submission failed.')),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to submit: $e')),
+      );
+    }
   }
 
   @override

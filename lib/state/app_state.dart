@@ -3,6 +3,8 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 
 import 'package:claimy/core/theme/app_colors.dart';
+import 'dart:async';
+import 'package:claimy/services/auth_service.dart';
 
 enum CaseStatus { pending, inReview, needsInfo, approved, rejected }
 
@@ -116,10 +118,22 @@ class Voucher {
   bool used;
 }
 
+
 class AppState extends ChangeNotifier {
   AppState() {
     _seedDemoData();
+    _authService = AuthService();
+    _authSub = _authService.authStateChanges().listen((user) {
+      final newVal = user != null;
+      if (newVal != _isAuthenticated) {
+        _isAuthenticated = newVal;
+        notifyListeners();
+      }
+    });
   }
+
+  late final AuthService _authService;
+  StreamSubscription? _authSub;
 
   final List<CaseModel> _cases = [];
   final List<Voucher> _vouchers = [];
@@ -145,23 +159,24 @@ class AppState extends ChangeNotifier {
     return List.unmodifiable(sorted);
   }
 
-  void signIn({required String email, required String password}) {
-    _isAuthenticated = true;
-    notifyListeners();
+  Future<void> signIn({required String email, required String password}) async {
+    await _authService.signInWithEmail(email: email, password: password);
   }
 
-  void register({
+  Future<void> register({
     required String name,
     required String email,
     required String password,
-  }) {
-    _isAuthenticated = true;
-    notifyListeners();
+  }) async {
+    await _authService.registerWithEmail(email: email, password: password, displayName: name);
   }
 
-  void signOut() {
-    _isAuthenticated = false;
-    notifyListeners();
+  Future<void> sendPasswordReset(String email) async {
+    await _authService.sendPasswordResetEmail(email);
+  }
+
+  Future<void> signOut() async {
+    await _authService.signOut();
   }
 
   void setLandingPreference(HomeLanding view) {
@@ -185,6 +200,10 @@ class AppState extends ChangeNotifier {
       caseModel.hasUnreadUpdates = false;
       notifyListeners();
     }
+  }
+
+  Future<void> signInWithGoogle() async {
+    await _authService.signInWithGoogle();
   }
 
   void respondToAdditionalInfo(String id, String response) {

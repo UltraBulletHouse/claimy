@@ -222,6 +222,10 @@ class _NewCaseScreenState extends State<NewCaseScreen> {
                 _customStore = false;
               }
             });
+            // Auto-advance when a store is selected or typed
+            if (_currentStep == 0 && _validateCurrentStep()) {
+              _goNext();
+            }
           },
         );
       case 1:
@@ -232,9 +236,17 @@ class _NewCaseScreenState extends State<NewCaseScreen> {
           receiptPhotoAdded: _receiptPhotoAdded,
           onToggleProduct: () {
             setState(() => _productPhotoAdded = !_productPhotoAdded);
+            // Auto-advance if both photos are now added
+            if (_currentStep == 2 && _productPhotoAdded && _receiptPhotoAdded) {
+              _goNext();
+            }
           },
           onToggleReceipt: () {
             setState(() => _receiptPhotoAdded = !_receiptPhotoAdded);
+            // Auto-advance if both photos are now added
+            if (_currentStep == 2 && _productPhotoAdded && _receiptPhotoAdded) {
+              _goNext();
+            }
           },
         );
       case 3:

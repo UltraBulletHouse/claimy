@@ -271,6 +271,8 @@ class AppState extends ChangeNotifier {
 
   CaseStatus _statusFromServer(String value) {
     switch (value) {
+      case 'IN_REVIEW':
+        return CaseStatus.inReview;
       case 'NEED_INFO':
         return CaseStatus.needsInfo;
       case 'APPROVED':

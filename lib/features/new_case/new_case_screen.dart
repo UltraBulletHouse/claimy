@@ -82,6 +82,8 @@ class _NewCaseScreenState extends State<NewCaseScreen> {
     ).showSnackBar(SnackBar(content: Text(message)));
   }
 
+  bool _isSubmitting = false;
+
   void _handlePrimaryAction() {
     if (_currentStep == _stepsCount - 1) {
       _submit();
@@ -91,49 +93,56 @@ class _NewCaseScreenState extends State<NewCaseScreen> {
   }
 
   Future<void> _submit() async {
-    if (!_validateCurrentStep()) {
-      return;
-    }
-    final store = _customStore
-        ? _customStoreController.text.trim()
-        : _selectedStore!;
-    final product = _productController.text.trim();
-    final description = _descriptionController.text.trim();
-
-    // Submit to backend first (no UI redesign, just wiring)
+    if (_isSubmitting) return;
+    setState(() => _isSubmitting = true);
     try {
-      final api = ComplaintsApi();
-      final images = <String>[]; // placeholders until real uploads exist
-      final result = await api.submitComplaint(
-        store: store,
-        product: product,
-        description: description.isEmpty ? null : description,
-        images: images,
-      );
-      if (result.ok) {
-        context.read<AppState>().createCase(
-          storeName: store,
-          productName: product,
-          description: description,
-          includedProductPhoto: _productPhotoAdded,
-          includedReceiptPhoto: _receiptPhotoAdded,
+      if (!_validateCurrentStep()) {
+        return;
+      }
+      final store = _customStore
+          ? _customStoreController.text.trim()
+          : _selectedStore!;
+      final product = _productController.text.trim();
+      final description = _descriptionController.text.trim();
+
+      // Submit to backend first (no UI redesign, just wiring)
+      try {
+        final api = ComplaintsApi();
+        final images = <String>[]; // placeholders until real uploads exist
+        final result = await api.submitComplaint(
+          store: store,
+          product: product,
+          description: description.isEmpty ? null : description,
+          images: images,
         );
+        if (result.ok) {
+          await context.read<AppState>().createCase(
+            storeName: store,
+            productName: product,
+            description: description,
+            includedProductPhoto: _productPhotoAdded,
+            includedReceiptPhoto: _receiptPhotoAdded,
+            alreadySubmitted: true,
+          );
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Claim submitted successfully.')),
+          );
+          Navigator.of(context).pop(true);
+        } else {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(result.message ?? 'Submission failed.')),
+          );
+        }
+      } catch (e) {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Claim submitted successfully.')),
-        );
-        Navigator.of(context).pop(true);
-      } else {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(result.message ?? 'Submission failed.')),
+          SnackBar(content: Text('Failed to submit: $e')),
         );
       }
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to submit: $e')),
-      );
+    } finally {
+      if (mounted) setState(() => _isSubmitting = false);
     }
   }
 
@@ -180,7 +189,7 @@ class _NewCaseScreenState extends State<NewCaseScreen> {
               Expanded(
                 flex: _currentStep > 0 ? 2 : 1,
                 child: ElevatedButton(
-                  onPressed: _handlePrimaryAction,
+                  onPressed: _isSubmitting ? null : _handlePrimaryAction,
                   child: Text(
                     _currentStep == _stepsCount - 1
                         ? 'Submit claim'

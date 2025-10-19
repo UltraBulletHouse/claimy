@@ -375,16 +375,38 @@ class CaseCard extends StatelessWidget {
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                CircleAvatar(
-                  backgroundColor: fadeColor(AppColors.primary, 0.1),
-                  child: Text(
-                    toInitial(caseModel.storeName),
-                    style: const TextStyle(
-                      color: AppColors.primary,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
+               SizedBox(
+                 width: 48,
+                 height: 48,
+                 child: ClipRRect(
+                   borderRadius: BorderRadius.circular(24),
+                   child: caseModel.productImageUrl != null
+                       ? Image.network(
+                           caseModel.productImageUrl!,
+                           fit: BoxFit.cover,
+                           errorBuilder: (_, __, ___) => CircleAvatar(
+                             backgroundColor: fadeColor(AppColors.primary, 0.1),
+                             child: Text(
+                               toInitial(caseModel.storeName),
+                               style: const TextStyle(
+                                 color: AppColors.primary,
+                                 fontWeight: FontWeight.w700,
+                               ),
+                             ),
+                           ),
+                         )
+                       : CircleAvatar(
+                           backgroundColor: fadeColor(AppColors.primary, 0.1),
+                           child: Text(
+                             toInitial(caseModel.storeName),
+                             style: const TextStyle(
+                               color: AppColors.primary,
+                               fontWeight: FontWeight.w700,
+                             ),
+                           ),
+                         ),
+                 ),
+               ),
                 const SizedBox(width: 16),
                 Expanded(
                   child: Column(
@@ -581,14 +603,36 @@ class _CaseDetailScreenState extends State<CaseDetailScreen> {
                 children: [
                   Row(
                     children: [
-                      CircleAvatar(
-                        backgroundColor: fadeColor(AppColors.primary, 0.1),
-                        child: Text(
-                          toInitial(caseModel.storeName),
-                          style: const TextStyle(
-                            color: AppColors.primary,
-                            fontWeight: FontWeight.w700,
-                          ),
+                      SizedBox(
+                        width: 56,
+                        height: 56,
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: caseModel.productImageUrl != null
+                              ? Image.network(
+                                  caseModel.productImageUrl!,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (_, __, ___) => CircleAvatar(
+                                    backgroundColor: fadeColor(AppColors.primary, 0.1),
+                                    child: Text(
+                                      toInitial(caseModel.storeName),
+                                      style: const TextStyle(
+                                        color: AppColors.primary,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                  ),
+                                )
+                              : CircleAvatar(
+                                  backgroundColor: fadeColor(AppColors.primary, 0.1),
+                                  child: Text(
+                                    toInitial(caseModel.storeName),
+                                    style: const TextStyle(
+                                      color: AppColors.primary,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ),
                         ),
                       ),
                       const SizedBox(width: 16),

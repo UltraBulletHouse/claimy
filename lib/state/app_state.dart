@@ -84,6 +84,7 @@ class CaseModel {
     required List<CaseUpdate> history,
     this.hasUnreadUpdates = false,
     this.pendingQuestion,
+    this.productImageUrl,
   }) : history = List<CaseUpdate>.from(history);
 
   final String id;
@@ -94,6 +95,7 @@ class CaseModel {
   final List<CaseUpdate> history;
   bool hasUnreadUpdates;
   String? pendingQuestion;
+  String? productImageUrl;
 
   DateTime get lastUpdated =>
       history.isNotEmpty ? history.last.timestamp : createdAt;
@@ -251,6 +253,9 @@ class AppState extends ChangeNotifier {
     final statusStr = (m['status'] ?? 'PENDING').toString().toUpperCase();
     final status = _statusFromServer(statusStr);
 
+    final productImageUrl = (m['productImageUrl'] ?? m['product_image_url'])?.toString();
+    final images = (m['images'] as List?)?.cast<dynamic>() ?? const [];
+
     return CaseModel(
       id: (m['id'] ?? m['_id'] ?? '').toString(),
       storeName: (m['store'] ?? '').toString(),
@@ -266,6 +271,9 @@ class AppState extends ChangeNotifier {
         ),
       ],
       hasUnreadUpdates: false,
+      productImageUrl: productImageUrl?.isNotEmpty == true
+          ? productImageUrl
+          : (images.isNotEmpty ? images.first?.toString() : null),
     );
   }
 

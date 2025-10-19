@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:flutter/services.dart';
 
 import 'package:claimy/core/theme/app_colors.dart';
 import 'package:claimy/core/utils/formatters.dart';
@@ -727,11 +729,72 @@ class _CaseDetailScreenState extends State<CaseDetailScreen> {
             ],
           ),
           const SizedBox(height: 8),
-          ...List.generate(caseModel.history.length, (index) {
-            final entry = caseModel.history[index];
-            final isLast = index == caseModel.history.length - 1;
-            return TimelineEntry(entry: entry, isLast: isLast);
-          }),
+         ...List.generate(caseModel.history.length, (index) {
+           final entry = caseModel.history[index];
+           final isLast = index == caseModel.history.length - 1;
+           return TimelineEntry(entry: entry, isLast: isLast);
+         }),
+         const SizedBox(height: 16),
+         if (caseModel.receiptImageUrl != null && caseModel.receiptImageUrl!.isNotEmpty)
+           Card(
+             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+             elevation: 0,
+             color: Colors.white,
+             child: Padding(
+               padding: const EdgeInsets.all(16),
+               child: Row(
+                 children: [
+                   const Icon(Icons.receipt_long_rounded, color: AppColors.textPrimary),
+                   const SizedBox(width: 12),
+                 Expanded(
+                   child: Column(
+                     crossAxisAlignment: CrossAxisAlignment.start,
+                     children: const [
+                       Text(
+                         'Receipt image',
+                         style: TextStyle(fontWeight: FontWeight.w700),
+                       ),
+                       SizedBox(height: 6),
+                       Text(
+                         'Open or copy the receipt image link if needed.',
+                         style: TextStyle(color: Colors.black54),
+                       ),
+                     ],
+                   ),
+                 ),
+                 Wrap(
+                   spacing: 6,
+                   children: [
+                     TextButton.icon(
+                       onPressed: () async {
+                         final url = caseModel.receiptImageUrl!;
+                         final uri = Uri.parse(url);
+                         if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+                           ScaffoldMessenger.of(context).showSnackBar(
+                             SnackBar(content: Text('Could not open: $url')),
+                           );
+                         }
+                       },
+                       icon: const Icon(Icons.open_in_new_rounded),
+                       label: const Text('Open'),
+                     ),
+                     OutlinedButton.icon(
+                       onPressed: () async {
+                         final url = caseModel.receiptImageUrl!;
+                         await Clipboard.setData(ClipboardData(text: url));
+                         ScaffoldMessenger.of(context).showSnackBar(
+                           const SnackBar(content: Text('Receipt link copied to clipboard')),
+                         );
+                       },
+                       icon: const Icon(Icons.copy_rounded),
+                       label: const Text('Copy'),
+                     ),
+                   ],
+                 ),
+                 ],
+               ),
+             ),
+           ),
         ],
       ),
     );

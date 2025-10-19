@@ -85,6 +85,7 @@ class CaseModel {
     this.hasUnreadUpdates = false,
     this.pendingQuestion,
     this.productImageUrl,
+    this.receiptImageUrl,
   }) : history = List<CaseUpdate>.from(history);
 
   final String id;
@@ -96,6 +97,7 @@ class CaseModel {
   bool hasUnreadUpdates;
   String? pendingQuestion;
   String? productImageUrl;
+  String? receiptImageUrl;
 
   DateTime get lastUpdated =>
       history.isNotEmpty ? history.last.timestamp : createdAt;
@@ -256,13 +258,13 @@ class AppState extends ChangeNotifier {
     final productImageUrl = (m['productImageUrl'] ?? m['product_image_url'])?.toString();
     final images = (m['images'] as List?)?.cast<dynamic>() ?? const [];
 
-    return CaseModel(
-      id: (m['id'] ?? m['_id'] ?? '').toString(),
-      storeName: (m['store'] ?? '').toString(),
-      productName: (m['product'] ?? '').toString(),
-      createdAt: createdAt,
-      status: status,
-      history: [
+   return CaseModel(
+     id: (m['id'] ?? m['_id'] ?? '').toString(),
+     storeName: (m['store'] ?? '').toString(),
+     productName: (m['product'] ?? '').toString(),
+     createdAt: createdAt,
+     status: status,
+     history: [
         CaseUpdate(
           status: status,
           message: 'Submitted',
@@ -270,11 +272,14 @@ class AppState extends ChangeNotifier {
           isCustomerAction: true,
         ),
       ],
-      hasUnreadUpdates: false,
-      productImageUrl: productImageUrl?.isNotEmpty == true
-          ? productImageUrl
-          : (images.isNotEmpty ? images.first?.toString() : null),
-    );
+     hasUnreadUpdates: false,
+     productImageUrl: productImageUrl?.isNotEmpty == true
+         ? productImageUrl
+         : (images.isNotEmpty ? images.first?.toString() : null),
+     receiptImageUrl: ((m['receiptImageUrl'] ?? m['receipt_image_url'])?.toString()?.isNotEmpty ?? false)
+         ? (m['receiptImageUrl'] ?? m['receipt_image_url']).toString()
+         : (images.length > 1 ? images[1]?.toString() : null),
+   );
   }
 
   CaseStatus _statusFromServer(String value) {

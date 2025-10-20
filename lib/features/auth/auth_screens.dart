@@ -233,7 +233,7 @@ class _LoginScreenState extends State<LoginScreen> {
               keyboardType: TextInputType.emailAddress,
               textInputAction: TextInputAction.next,
               decoration: _fieldDecoration(
-                label: 'Work email',
+                label: 'Email',
                 icon: Icons.mail_outline_rounded,
               ),
               validator: (value) {
@@ -355,14 +355,12 @@ class _BrandHeader extends StatelessWidget {
           alignment: Alignment.center,
           child: Image.asset(
             'assets/images/claimy_logo.png',
-            width: 64,
-            height: 64,
+            width: 90,
+            height: 90,
             fit: BoxFit.contain,
           ),
         ),
         const SizedBox(height: 28),
-        Text('Welcome back', style: headlineStyle),
-        const SizedBox(height: 10),
         Text(
           'Sign in to continue managing your claims and rewards.',
           style: supportingStyle,

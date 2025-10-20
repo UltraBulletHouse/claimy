@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "464713321169",
+    "project_id": "claimy-87868",
+    "storage_bucket": "claimy-87868.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:464713321169:android:f1a69a822dcfe60a4253f0",
+        "android_client_info": {
+          "package_name": "com.example.claimy"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "464713321169-vp9o86nak7soke37c9qlqkrr2c0tmrm5.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDjTCU1_ZmSJgC9Q6zW-nDVSEdLjsX_XEk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "464713321169-vp9o86nak7soke37c9qlqkrr2c0tmrm5.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

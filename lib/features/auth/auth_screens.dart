@@ -23,8 +23,22 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  void _submit() {
+  Future<void> _submit() async {
     if (_formKey.currentState!.validate()) {
+      try {
+        await context.read<AppState>().signIn(
+          email: _emailController.text.trim(),
+          password: _passwordController.text,
+        );
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Login failed: ${e is Exception ? e.toString().replaceFirst('Exception: ', '') : e.toString()}',
+            ),
+          ),
+        );
+      }
       FocusScope.of(context).unfocus();
       context.read<AppState>().signIn(
         email: _emailController.text.trim(),
@@ -413,14 +427,21 @@ class _SignUpScreenState extends State<SignUpScreen> {
     super.dispose();
   }
 
-  void _submit() {
+  Future<void> _submit() async {
     if (_formKey.currentState!.validate()) {
-      context.read<AppState>().register(
-        name: _nameController.text.trim(),
-        email: _emailController.text.trim(),
-        password: _passwordController.text,
-      );
-      Navigator.of(context).pop();
+      try {
+        await context.read<AppState>().register(
+          name: _nameController.text.trim(),
+          email: _emailController.text.trim(),
+          password: _passwordController.text,
+        );
+        if (!mounted) return;
+        Navigator.of(context).pop();
+      } catch (e) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Sign up failed: $e')));
+      }
     }
   }
 
@@ -543,7 +564,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     super.dispose();
   }
 
-  void _submit() {
+  Future<void> _submit() async {
     final email = _emailController.text.trim();
     if (email.isEmpty || !email.contains('@')) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -551,12 +572,20 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       );
       return;
     }
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Check $email for a link to reset your password.'),
-      ),
-    );
-    Navigator.of(context).pop();
+    try {
+      await context.read<AppState>().sendPasswordReset(email);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Check $email for a link to reset your password.'),
+        ),
+      );
+      Navigator.of(context).pop();
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Failed to send reset email: $e')));
+    }
   }
 
   @override

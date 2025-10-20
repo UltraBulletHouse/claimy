@@ -1,5 +1,10 @@
 import 'package:flutter/material.dart';
+import 'dart:typed_data';
+import 'dart:convert';
 import 'package:provider/provider.dart';
+import 'package:claimy/core/api/complaints_api.dart';
+import 'package:claimy/core/api/uploads_api.dart';
+import 'package:file_picker/file_picker.dart';
 
 import 'package:claimy/core/theme/app_colors.dart';
 import 'package:claimy/state/app_state.dart';
@@ -29,6 +34,14 @@ class _NewCaseScreenState extends State<NewCaseScreen> {
   final TextEditingController _descriptionController = TextEditingController();
   bool _productPhotoAdded = false;
   bool _receiptPhotoAdded = false;
+
+  Uint8List? _productBytes;
+  Uint8List? _receiptBytes;
+
+  String? _productPreviewDataUrl;
+  String? _receiptPreviewDataUrl;
+
+  bool _uploading = false;
 
   @override
   void dispose() {
@@ -81,6 +94,8 @@ class _NewCaseScreenState extends State<NewCaseScreen> {
     ).showSnackBar(SnackBar(content: Text(message)));
   }
 
+  bool _isSubmitting = false;
+
   void _handlePrimaryAction() {
     if (_currentStep == _stepsCount - 1) {
       _submit();
@@ -89,24 +104,87 @@ class _NewCaseScreenState extends State<NewCaseScreen> {
     }
   }
 
-  void _submit() {
-    if (!_validateCurrentStep()) {
-      return;
-    }
-    final store = _customStore
-        ? _customStoreController.text.trim()
-        : _selectedStore!;
-    final product = _productController.text.trim();
-    final description = _descriptionController.text.trim();
-    context.read<AppState>().createCase(
-      storeName: store,
-      productName: product,
-      description: description,
-      includedProductPhoto: _productPhotoAdded,
-      includedReceiptPhoto: _receiptPhotoAdded,
-    );
-    Navigator.of(context).pop(true);
-  }
+ Future<void> _submit() async {
+   if (_isSubmitting) return;
+   setState(() => _isSubmitting = true);
+   try {
+     if (!_validateCurrentStep()) {
+       return;
+     }
+     final store = _customStore
+         ? _customStoreController.text.trim()
+         : _selectedStore!;
+     final product = _productController.text.trim();
+     final description = _descriptionController.text.trim();
+
+     String? productUrl;
+     String? receiptUrl;
+
+     // Upload images first if present
+     try {
+       if (_productBytes != null || _receiptBytes != null) {
+         setState(() => _uploading = true);
+         final uploader = UploadsApi();
+         final res = await uploader.uploadImages(
+           productBytes: _productBytes,
+           receiptBytes: _receiptBytes,
+         );
+         productUrl = res.productImageUrl;
+         receiptUrl = res.receiptImageUrl;
+       }
+     } catch (e) {
+       if (!mounted) return;
+       ScaffoldMessenger.of(context).showSnackBar(
+         SnackBar(content: Text('Image upload failed: $e')),
+       );
+       return;
+     } finally {
+       if (mounted) setState(() => _uploading = false);
+     }
+
+     // Submit to backend
+     try {
+       final api = ComplaintsApi();
+       final images = <String>[
+         if (productUrl != null) productUrl,
+         if (receiptUrl != null) receiptUrl,
+       ];
+       final result = await api.submitComplaint(
+         store: store,
+         product: product,
+         description: description.isEmpty ? null : description,
+         images: images,
+       );
+       if (result.ok) {
+         await context.read<AppState>().createCase(
+           storeName: store,
+           productName: product,
+           description: description,
+           includedProductPhoto: _productPhotoAdded,
+           includedReceiptPhoto: _receiptPhotoAdded,
+           alreadySubmitted: true,
+         );
+         if (!mounted) return;
+         ScaffoldMessenger.of(context).showSnackBar(
+           const SnackBar(content: Text('Claim submitted successfully.')),
+         );
+         Navigator.of(context).pop(true);
+       } else {
+         if (!mounted) return;
+         ScaffoldMessenger.of(context).showSnackBar(
+           SnackBar(content: Text(result.message ?? 'Submission failed.')),
+         );
+       }
+     } catch (e) {
+       if (!mounted) return;
+       ScaffoldMessenger.of(context).showSnackBar(
+         SnackBar(content: Text('Failed to submit: $e')),
+       );
+     }
+   } finally {
+     if (mounted) setState(() => _isSubmitting = false);
+   }
+ }
 
   @override
   Widget build(BuildContext context) {
@@ -150,14 +228,14 @@ class _NewCaseScreenState extends State<NewCaseScreen> {
               if (_currentStep > 0) const SizedBox(width: 12),
               Expanded(
                 flex: _currentStep > 0 ? 2 : 1,
-                child: ElevatedButton(
-                  onPressed: _handlePrimaryAction,
-                  child: Text(
-                    _currentStep == _stepsCount - 1
-                        ? 'Submit claim'
-                        : 'Continue',
-                  ),
-                ),
+               child: ElevatedButton(
+                 onPressed: (_isSubmitting || _uploading) ? null : _handlePrimaryAction,
+                 child: (_isSubmitting || _uploading)
+                     ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                     : Text(
+                         _currentStep == _stepsCount - 1 ? 'Submit claim' : 'Continue',
+                       ),
+               ),
               ),
             ],
           ),
@@ -184,21 +262,41 @@ class _NewCaseScreenState extends State<NewCaseScreen> {
                 _customStore = false;
               }
             });
+            // Auto-advance when a store is selected or typed
+            if (_currentStep == 0 && _validateCurrentStep()) {
+              _goNext();
+            }
           },
         );
       case 1:
         return _ProductStep(controller: _productController);
       case 2:
-        return _PhotosStep(
-          productPhotoAdded: _productPhotoAdded,
-          receiptPhotoAdded: _receiptPhotoAdded,
-          onToggleProduct: () {
-            setState(() => _productPhotoAdded = !_productPhotoAdded);
-          },
-          onToggleReceipt: () {
-            setState(() => _receiptPhotoAdded = !_receiptPhotoAdded);
-          },
-        );
+       return _PhotosStep(
+         productPhotoAdded: _productPhotoAdded,
+         receiptPhotoAdded: _receiptPhotoAdded,
+         productPreviewDataUrl: _productPreviewDataUrl,
+         receiptPreviewDataUrl: _receiptPreviewDataUrl,
+         onPickProduct: (bytes, preview) {
+           setState(() {
+             _productBytes = bytes;
+             _productPreviewDataUrl = preview;
+             _productPhotoAdded = bytes != null;
+           });
+           if (_currentStep == 2 && _productPhotoAdded && _receiptPhotoAdded) {
+             _goNext();
+           }
+         },
+         onPickReceipt: (bytes, preview) {
+           setState(() {
+             _receiptBytes = bytes;
+             _receiptPreviewDataUrl = preview;
+             _receiptPhotoAdded = bytes != null;
+           });
+           if (_currentStep == 2 && _productPhotoAdded && _receiptPhotoAdded) {
+             _goNext();
+           }
+         },
+       );
       case 3:
         return _NotesStep(controller: _descriptionController);
       default:
@@ -328,14 +426,18 @@ class _PhotosStep extends StatelessWidget {
   const _PhotosStep({
     required this.productPhotoAdded,
     required this.receiptPhotoAdded,
-    required this.onToggleProduct,
-    required this.onToggleReceipt,
+    required this.onPickProduct,
+    required this.onPickReceipt,
+    this.productPreviewDataUrl,
+    this.receiptPreviewDataUrl,
   });
 
   final bool productPhotoAdded;
   final bool receiptPhotoAdded;
-  final VoidCallback onToggleProduct;
-  final VoidCallback onToggleReceipt;
+  final void Function(Uint8List? bytes, String? preview) onPickProduct;
+  final void Function(Uint8List? bytes, String? preview) onPickReceipt;
+  final String? productPreviewDataUrl;
+  final String? receiptPreviewDataUrl;
 
   @override
   Widget build(BuildContext context) {
@@ -359,21 +461,23 @@ class _PhotosStep extends StatelessWidget {
         const SizedBox(height: 24),
         Row(
           children: [
-            Expanded(
-              child: _PhotoBox(
-                label: 'Product photo',
-                added: productPhotoAdded,
-                onTap: onToggleProduct,
-              ),
-            ),
+           Expanded(
+             child: _PhotoBox(
+               label: 'Product photo',
+               added: productPhotoAdded,
+               previewDataUrl: productPreviewDataUrl,
+               onSelected: onPickProduct,
+             ),
+           ),
             const SizedBox(width: 16),
-            Expanded(
-              child: _PhotoBox(
-                label: 'Receipt photo',
-                added: receiptPhotoAdded,
-                onTap: onToggleReceipt,
-              ),
-            ),
+           Expanded(
+             child: _PhotoBox(
+               label: 'Receipt photo',
+               added: receiptPhotoAdded,
+               previewDataUrl: receiptPreviewDataUrl,
+               onSelected: onPickReceipt,
+             ),
+           ),
           ],
         ),
       ],
@@ -385,28 +489,61 @@ class _PhotoBox extends StatelessWidget {
   const _PhotoBox({
     required this.label,
     required this.added,
-    required this.onTap,
+    required this.onSelected,
+    this.previewDataUrl,
   });
 
   final String label;
   final bool added;
-  final VoidCallback onTap;
+  final void Function(Uint8List? bytes, String? preview) onSelected;
+  final String? previewDataUrl;
+
+  bool _isValidImage(String name, int size) {
+    final lower = name.toLowerCase();
+    final okExt = lower.endsWith('.jpg') || lower.endsWith('.jpeg') || lower.endsWith('.png') || lower.endsWith('.webp');
+    if (!okExt) return false;
+    // 5 MB limit
+    if (size > 5 * 1024 * 1024) return false;
+    return true;
+  }
+
+  Future<void> _pickFile(BuildContext context) async {
+    try {
+      final res = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['jpg', 'jpeg', 'png', 'webp'],
+        allowMultiple: false,
+        withData: true,
+      );
+      if (res == null || res.files.isEmpty) return;
+      final file = res.files.first;
+      if (!_isValidImage(file.name, file.size)) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please choose an image under 5 MB (jpg, png, webp).')),
+        );
+        return;
+      }
+      final bytes = file.bytes;
+      if (bytes == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to read the selected file.')),
+        );
+        return;
+      }
+      final preview = 'data:image/*;base64,' + base64Encode(bytes);
+      onSelected(bytes, preview);
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to pick file: $e')),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () {
-        onTap();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              added
-                  ? 'Removed $label placeholder.'
-                  : 'Pretending to add $label.',
-            ),
-          ),
-        );
-      },
+    return InkWell(
+      borderRadius: BorderRadius.circular(20),
+      onTap: () => _pickFile(context),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         height: 150,

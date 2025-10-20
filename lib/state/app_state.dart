@@ -3,6 +3,9 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 
 import 'package:claimy/core/theme/app_colors.dart';
+import 'dart:async';
+import 'package:claimy/services/auth_service.dart';
+import 'package:claimy/core/api/complaints_api.dart';
 
 enum CaseStatus { pending, inReview, needsInfo, approved, rejected }
 
@@ -81,6 +84,8 @@ class CaseModel {
     required List<CaseUpdate> history,
     this.hasUnreadUpdates = false,
     this.pendingQuestion,
+    this.productImageUrl,
+    this.receiptImageUrl,
   }) : history = List<CaseUpdate>.from(history);
 
   final String id;
@@ -91,6 +96,8 @@ class CaseModel {
   final List<CaseUpdate> history;
   bool hasUnreadUpdates;
   String? pendingQuestion;
+  String? productImageUrl;
+  String? receiptImageUrl;
 
   DateTime get lastUpdated =>
       history.isNotEmpty ? history.last.timestamp : createdAt;
@@ -118,8 +125,27 @@ class Voucher {
 
 class AppState extends ChangeNotifier {
   AppState() {
-    _seedDemoData();
+    _authService = AuthService();
+    _api = ComplaintsApi();
+    _authSub = _authService.authStateChanges().listen((user) {
+      final newVal = user != null;
+      if (newVal != _isAuthenticated) {
+        _isAuthenticated = newVal;
+        // Immediately notify so UI can transition to HomeShell/Login
+        notifyListeners();
+        if (_isAuthenticated) {
+          // Load cases in the background; UI is already switched
+          refreshCasesFromServer();
+        } else {
+          _cases.clear();
+        }
+      }
+    });
   }
+
+  late final AuthService _authService;
+  late final ComplaintsApi _api;
+  StreamSubscription? _authSub;
 
   final List<CaseModel> _cases = [];
   final List<Voucher> _vouchers = [];
@@ -145,23 +171,24 @@ class AppState extends ChangeNotifier {
     return List.unmodifiable(sorted);
   }
 
-  void signIn({required String email, required String password}) {
-    _isAuthenticated = true;
-    notifyListeners();
+  Future<void> signIn({required String email, required String password}) async {
+    await _authService.signInWithEmail(email: email, password: password);
   }
 
-  void register({
+  Future<void> register({
     required String name,
     required String email,
     required String password,
-  }) {
-    _isAuthenticated = true;
-    notifyListeners();
+  }) async {
+    await _authService.registerWithEmail(email: email, password: password, displayName: name);
   }
 
-  void signOut() {
-    _isAuthenticated = false;
-    notifyListeners();
+  Future<void> sendPasswordReset(String email) async {
+    await _authService.sendPasswordResetEmail(email);
+  }
+
+  Future<void> signOut() async {
+    await _authService.signOut();
   }
 
   void setLandingPreference(HomeLanding view) {
@@ -187,6 +214,10 @@ class AppState extends ChangeNotifier {
     }
   }
 
+  Future<void> signInWithGoogle() async {
+    await _authService.signInWithGoogle();
+  }
+
   void respondToAdditionalInfo(String id, String response) {
     final caseModel = caseById(id);
     if (caseModel == null) return;
@@ -204,40 +235,99 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  void createCase({
+  Future<void> refreshCasesFromServer() async {
+    try {
+      final result = await _api.getCases(limit: 100, offset: 0);
+      _cases
+        ..clear()
+        ..addAll(result.items.map(_mapServerCaseToModel));
+      notifyListeners();
+    } catch (e) {
+      // If fetch fails, keep current state; no demo data
+    }
+  }
+
+  CaseModel _mapServerCaseToModel(Map<String, dynamic> m) {
+    final createdAtStr = (m['createdAt'] ?? m['created_at'] ?? '') as String?;
+    final createdAt = createdAtStr != null && createdAtStr.isNotEmpty
+        ? DateTime.tryParse(createdAtStr) ?? DateTime.now()
+        : DateTime.now();
+    final statusStr = (m['status'] ?? 'PENDING').toString().toUpperCase();
+    final status = _statusFromServer(statusStr);
+
+    final productImageUrl = (m['productImageUrl'] ?? m['product_image_url'])?.toString();
+    final images = (m['images'] as List?)?.cast<dynamic>() ?? const [];
+
+   return CaseModel(
+     id: (m['id'] ?? m['_id'] ?? '').toString(),
+     storeName: (m['store'] ?? '').toString(),
+     productName: (m['product'] ?? '').toString(),
+     createdAt: createdAt,
+     status: status,
+     history: [
+        CaseUpdate(
+          status: status,
+          message: 'Submitted',
+          timestamp: createdAt,
+          isCustomerAction: true,
+        ),
+      ],
+     hasUnreadUpdates: false,
+     productImageUrl: productImageUrl?.isNotEmpty == true
+         ? productImageUrl
+         : (images.isNotEmpty ? images.first?.toString() : null),
+     receiptImageUrl: ((m['receiptImageUrl'] ?? m['receipt_image_url'])?.toString()?.isNotEmpty ?? false)
+         ? (m['receiptImageUrl'] ?? m['receipt_image_url']).toString()
+         : (images.length > 1 ? images[1]?.toString() : null),
+   );
+  }
+
+  CaseStatus _statusFromServer(String value) {
+    switch (value) {
+      case 'IN_REVIEW':
+        return CaseStatus.inReview;
+      case 'NEED_INFO':
+        return CaseStatus.needsInfo;
+      case 'APPROVED':
+        return CaseStatus.approved;
+      case 'REJECTED':
+        return CaseStatus.rejected;
+      case 'PENDING':
+      default:
+        return CaseStatus.pending;
+    }
+  }
+
+  Future<void> createCase({
     required String storeName,
     required String productName,
     required String description,
     required bool includedProductPhoto,
     required bool includedReceiptPhoto,
-  }) {
-    final now = DateTime.now();
-    final newCase = CaseModel(
-      id: 'case-${now.millisecondsSinceEpoch}',
-      storeName: storeName,
-      productName: productName,
-      createdAt: now,
-      status: CaseStatus.pending,
-      history: [
-        CaseUpdate(
-          status: CaseStatus.pending,
-          message:
-              'You submitted the claim with product and receipt photos attached.',
-          timestamp: now,
-          isCustomerAction: true,
-        ),
-        if (description.isNotEmpty)
-          CaseUpdate(
-            status: CaseStatus.pending,
-            message: 'Additional note: $description',
-            timestamp: now.add(const Duration(minutes: 1)),
-            isCustomerAction: true,
-          ),
-      ],
-      hasUnreadUpdates: false,
-    );
-    _cases.add(newCase);
-    notifyListeners();
+    bool alreadySubmitted = false,
+  }) async {
+    // If the caller already submitted to backend, just refresh
+    if (alreadySubmitted) {
+      await refreshCasesFromServer();
+      return;
+    }
+
+    // Otherwise, call backend to persist the case for the logged-in user
+    try {
+      final api = ComplaintsApi();
+      await api.submitComplaint(
+        store: storeName,
+        product: productName,
+        description: description,
+        images: [
+          if (includedProductPhoto) 'product://photo',
+          if (includedReceiptPhoto) 'receipt://photo',
+        ],
+      );
+      await refreshCasesFromServer();
+    } catch (e) {
+      // On failure, do not create local mock data
+    }
   }
 
   void toggleVoucherUsed(String id) {
@@ -249,6 +339,7 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  // Local demo-only simulation; server-driven status updates should come from backend in the future
   void simulateProgress(String id) {
     final caseModel = caseById(id);
     if (caseModel == null) return;
@@ -307,102 +398,5 @@ class AppState extends ChangeNotifier {
       used: false,
     );
     _vouchers.add(voucher);
-  }
-
-  void _seedDemoData() {
-    final now = DateTime.now();
-    _cases.addAll([
-      CaseModel(
-        id: 'case-1001',
-        storeName: 'FreshMart Market',
-        productName: 'Organic almond milk',
-        createdAt: now.subtract(const Duration(days: 6)),
-        status: CaseStatus.needsInfo,
-        hasUnreadUpdates: true,
-        pendingQuestion: 'Do you still have the original packaging?',
-        history: [
-          CaseUpdate(
-            status: CaseStatus.pending,
-            message: 'You submitted the claim.',
-            timestamp: now.subtract(const Duration(days: 6)),
-            isCustomerAction: true,
-          ),
-          CaseUpdate(
-            status: CaseStatus.inReview,
-            message: 'A specialist picked up your claim.',
-            timestamp: now.subtract(const Duration(days: 5, hours: 6)),
-          ),
-          CaseUpdate(
-            status: CaseStatus.needsInfo,
-            message:
-                'We need a quick photo of the packaging to keep things moving.',
-            timestamp: now.subtract(const Duration(hours: 5)),
-          ),
-        ],
-      ),
-      CaseModel(
-        id: 'case-1002',
-        storeName: 'TechTown',
-        productName: 'Bluetooth earbuds (Graphite)',
-        createdAt: now.subtract(const Duration(days: 3)),
-        status: CaseStatus.inReview,
-        history: [
-          CaseUpdate(
-            status: CaseStatus.pending,
-            message: 'You submitted the claim.',
-            timestamp: now.subtract(const Duration(days: 3)),
-            isCustomerAction: true,
-          ),
-          CaseUpdate(
-            status: CaseStatus.inReview,
-            message: 'We are talking to the store about a replacement.',
-            timestamp: now.subtract(const Duration(days: 1, hours: 12)),
-          ),
-        ],
-      ),
-      CaseModel(
-        id: 'case-1003',
-        storeName: 'Beauty Loft',
-        productName: 'Vitamin C serum',
-        createdAt: now.subtract(const Duration(days: 12)),
-        status: CaseStatus.approved,
-        history: [
-          CaseUpdate(
-            status: CaseStatus.pending,
-            message: 'You submitted the claim.',
-            timestamp: now.subtract(const Duration(days: 12)),
-            isCustomerAction: true,
-          ),
-          CaseUpdate(
-            status: CaseStatus.inReview,
-            message: 'We are validating the issue with Beauty Loft.',
-            timestamp: now.subtract(const Duration(days: 10)),
-          ),
-          CaseUpdate(
-            status: CaseStatus.approved,
-            message:
-                'Approved! We issued a 10% discount voucher for your next purchase.',
-            timestamp: now.subtract(const Duration(days: 2)),
-          ),
-        ],
-      ),
-    ]);
-
-    _vouchers.addAll([
-      Voucher(
-        id: 'voucher-01',
-        storeName: 'Beauty Loft',
-        amountLabel: '10% off skin care',
-        code: 'GLOW10',
-        expiration: now.add(const Duration(days: 18)),
-      ),
-      Voucher(
-        id: 'voucher-02',
-        storeName: 'HomeGoods Depot',
-        amountLabel: '\$15 cashback certificate',
-        code: 'HGDSAVE15',
-        expiration: now.add(const Duration(days: 45)),
-      ),
-    ]);
   }
 }

@@ -1,11 +1,12 @@
+import 'dart:async';
 import 'dart:math';
 
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
-import 'package:claimy/core/theme/app_colors.dart';
-import 'dart:async';
-import 'package:claimy/services/auth_service.dart';
 import 'package:claimy/core/api/complaints_api.dart';
+import 'package:claimy/core/theme/app_colors.dart';
+import 'package:claimy/services/auth_service.dart';
 
 enum CaseStatus { pending, inReview, needsInfo, approved, rejected }
 
@@ -128,6 +129,8 @@ class AppState extends ChangeNotifier {
     _authService = AuthService();
     _api = ComplaintsApi();
     _authSub = _authService.authStateChanges().listen((user) {
+      final previousUser = _currentUser;
+      _currentUser = user;
       final newVal = user != null;
       if (newVal != _isAuthenticated) {
         _isAuthenticated = newVal;
@@ -139,6 +142,9 @@ class AppState extends ChangeNotifier {
         } else {
           _cases.clear();
         }
+      } else if (previousUser?.uid != _currentUser?.uid ||
+          previousUser?.displayName != _currentUser?.displayName) {
+        notifyListeners();
       }
     });
   }
@@ -146,6 +152,7 @@ class AppState extends ChangeNotifier {
   late final AuthService _authService;
   late final ComplaintsApi _api;
   StreamSubscription? _authSub;
+  User? _currentUser;
 
   final List<CaseModel> _cases = [];
   final List<Voucher> _vouchers = [];
@@ -180,7 +187,11 @@ class AppState extends ChangeNotifier {
     required String email,
     required String password,
   }) async {
-    await _authService.registerWithEmail(email: email, password: password, displayName: name);
+    await _authService.registerWithEmail(
+      email: email,
+      password: password,
+      displayName: name,
+    );
   }
 
   Future<void> sendPasswordReset(String email) async {
@@ -189,6 +200,7 @@ class AppState extends ChangeNotifier {
 
   Future<void> signOut() async {
     await _authService.signOut();
+    _currentUser = null;
   }
 
   void setLandingPreference(HomeLanding view) {
@@ -216,6 +228,18 @@ class AppState extends ChangeNotifier {
 
   Future<void> signInWithGoogle() async {
     await _authService.signInWithGoogle();
+  }
+
+  String get greetingName {
+    final displayName = _currentUser?.displayName?.trim();
+    if (displayName != null && displayName.isNotEmpty) {
+      return displayName.split(' ').first;
+    }
+    final email = _currentUser?.email?.trim();
+    if (email != null && email.isNotEmpty) {
+      return email.split('@').first;
+    }
+    return 'there';
   }
 
   void respondToAdditionalInfo(String id, String response) {
@@ -255,16 +279,17 @@ class AppState extends ChangeNotifier {
     final statusStr = (m['status'] ?? 'PENDING').toString().toUpperCase();
     final status = _statusFromServer(statusStr);
 
-    final productImageUrl = (m['productImageUrl'] ?? m['product_image_url'])?.toString();
+    final productImageUrl = (m['productImageUrl'] ?? m['product_image_url'])
+        ?.toString();
     final images = (m['images'] as List?)?.cast<dynamic>() ?? const [];
 
-   return CaseModel(
-     id: (m['id'] ?? m['_id'] ?? '').toString(),
-     storeName: (m['store'] ?? '').toString(),
-     productName: (m['product'] ?? '').toString(),
-     createdAt: createdAt,
-     status: status,
-     history: [
+    return CaseModel(
+      id: (m['id'] ?? m['_id'] ?? '').toString(),
+      storeName: (m['store'] ?? '').toString(),
+      productName: (m['product'] ?? '').toString(),
+      createdAt: createdAt,
+      status: status,
+      history: [
         CaseUpdate(
           status: status,
           message: 'Submitted',
@@ -272,14 +297,18 @@ class AppState extends ChangeNotifier {
           isCustomerAction: true,
         ),
       ],
-     hasUnreadUpdates: false,
-     productImageUrl: productImageUrl?.isNotEmpty == true
-         ? productImageUrl
-         : (images.isNotEmpty ? images.first?.toString() : null),
-     receiptImageUrl: ((m['receiptImageUrl'] ?? m['receipt_image_url'])?.toString()?.isNotEmpty ?? false)
-         ? (m['receiptImageUrl'] ?? m['receipt_image_url']).toString()
-         : (images.length > 1 ? images[1]?.toString() : null),
-   );
+      hasUnreadUpdates: false,
+      productImageUrl: productImageUrl?.isNotEmpty == true
+          ? productImageUrl
+          : (images.isNotEmpty ? images.first?.toString() : null),
+      receiptImageUrl:
+          ((m['receiptImageUrl'] ?? m['receipt_image_url'])
+                  ?.toString()
+                  ?.isNotEmpty ??
+              false)
+          ? (m['receiptImageUrl'] ?? m['receipt_image_url']).toString()
+          : (images.length > 1 ? images[1]?.toString() : null),
+    );
   }
 
   CaseStatus _statusFromServer(String value) {

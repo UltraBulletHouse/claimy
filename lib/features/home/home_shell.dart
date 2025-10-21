@@ -54,14 +54,9 @@ class _HomeShellState extends State<HomeShell> {
       extendBody: true,
       backgroundColor: Colors.transparent,
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _openNewCase,
-        backgroundColor: Colors.white,
-        foregroundColor: AppColors.primary,
-        elevation: 6,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-        icon: const Icon(Icons.add_rounded),
-        label: const Text('New claim'),
+      floatingActionButton: Padding(
+        padding: const EdgeInsets.only(right: 6, bottom: 6),
+        child: _NewClaimButton(onPressed: _openNewCase),
       ),
       body: Container(
         decoration: const BoxDecoration(
@@ -192,6 +187,71 @@ class _HomeShellState extends State<HomeShell> {
                 ),
               ),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _NewClaimButton extends StatelessWidget {
+  const _NewClaimButton({required this.onPressed});
+
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final iconBackground = Colors.white.withOpacity(0.22);
+    final borderColor = fadeColor(AppColors.primary, 0.28);
+
+    return Material(
+      color: Colors.transparent,
+      elevation: 10,
+      shadowColor: fadeColor(AppColors.primary, 0.28),
+      borderRadius: BorderRadius.circular(26),
+      clipBehavior: Clip.antiAlias,
+      child: Ink(
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [Color(0xFF4A74FF), Color(0xFF6C9BFF)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(26),
+          border: Border.all(color: borderColor),
+        ),
+        child: InkWell(
+          onTap: onPressed,
+          borderRadius: BorderRadius.circular(26),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 12),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  decoration: BoxDecoration(
+                    color: iconBackground,
+                    shape: BoxShape.circle,
+                  ),
+                  padding: const EdgeInsets.all(6),
+                  child: const Icon(
+                    Icons.add_rounded,
+                    color: Colors.white,
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Text(
+                  'New claim',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.1,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

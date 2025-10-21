@@ -17,7 +17,7 @@ class NewCaseScreen extends StatefulWidget {
 }
 
 class _NewCaseScreenState extends State<NewCaseScreen> {
-  static const int _stepsCount = 4;
+  static const int _stepsCount = 3;
   static const List<_StoreBrand> _storeBrands = [
     _StoreBrand(
       name: 'FreshMart Market',
@@ -96,8 +96,6 @@ class _NewCaseScreenState extends State<NewCaseScreen> {
           _showMessage('Tell us the product name.');
           return false;
         }
-        return true;
-      case 2:
         if (!_productPhotoAdded || !_receiptPhotoAdded) {
           _showMessage('Please add both photos before continuing.');
           return false;
@@ -285,35 +283,28 @@ class _NewCaseScreenState extends State<NewCaseScreen> {
           },
         );
       case 1:
-        return _ProductStep(controller: _productController);
+        return _ProductStep(
+          controller: _productController,
+          productPhotoAdded: _productPhotoAdded,
+          receiptPhotoAdded: _receiptPhotoAdded,
+          productPreviewDataUrl: _productPreviewDataUrl,
+          receiptPreviewDataUrl: _receiptPreviewDataUrl,
+          onPickProduct: (bytes, preview) {
+            setState(() {
+              _productBytes = bytes;
+              _productPreviewDataUrl = preview;
+              _productPhotoAdded = bytes != null;
+            });
+          },
+          onPickReceipt: (bytes, preview) {
+            setState(() {
+              _receiptBytes = bytes;
+              _receiptPreviewDataUrl = preview;
+              _receiptPhotoAdded = bytes != null;
+            });
+          },
+        );
       case 2:
-       return _PhotosStep(
-         productPhotoAdded: _productPhotoAdded,
-         receiptPhotoAdded: _receiptPhotoAdded,
-         productPreviewDataUrl: _productPreviewDataUrl,
-         receiptPreviewDataUrl: _receiptPreviewDataUrl,
-         onPickProduct: (bytes, preview) {
-           setState(() {
-             _productBytes = bytes;
-             _productPreviewDataUrl = preview;
-             _productPhotoAdded = bytes != null;
-           });
-           if (_currentStep == 2 && _productPhotoAdded && _receiptPhotoAdded) {
-             _goNext();
-           }
-         },
-         onPickReceipt: (bytes, preview) {
-           setState(() {
-             _receiptBytes = bytes;
-             _receiptPreviewDataUrl = preview;
-             _receiptPhotoAdded = bytes != null;
-           });
-           if (_currentStep == 2 && _productPhotoAdded && _receiptPhotoAdded) {
-             _goNext();
-           }
-         },
-       );
-      case 3:
         return _NotesStep(controller: _descriptionController);
       default:
         return const SizedBox.shrink();
@@ -540,9 +531,23 @@ class _OtherStoreButton extends StatelessWidget {
 }
 
 class _ProductStep extends StatelessWidget {
-  const _ProductStep({required this.controller});
+  const _ProductStep({
+    required this.controller,
+    required this.productPhotoAdded,
+    required this.receiptPhotoAdded,
+    required this.onPickProduct,
+    required this.onPickReceipt,
+    this.productPreviewDataUrl,
+    this.receiptPreviewDataUrl,
+  });
 
   final TextEditingController controller;
+  final bool productPhotoAdded;
+  final bool receiptPhotoAdded;
+  final void Function(Uint8List? bytes, String? preview) onPickProduct;
+  final void Function(Uint8List? bytes, String? preview) onPickReceipt;
+  final String? productPreviewDataUrl;
+  final String? receiptPreviewDataUrl;
 
   @override
   Widget build(BuildContext context) {
@@ -574,67 +579,41 @@ class _ProductStep extends StatelessWidget {
             ),
           ),
         ),
-      ],
-    );
-  }
-}
-
-class _PhotosStep extends StatelessWidget {
-  const _PhotosStep({
-    required this.productPhotoAdded,
-    required this.receiptPhotoAdded,
-    required this.onPickProduct,
-    required this.onPickReceipt,
-    this.productPreviewDataUrl,
-    this.receiptPreviewDataUrl,
-  });
-
-  final bool productPhotoAdded;
-  final bool receiptPhotoAdded;
-  final void Function(Uint8List? bytes, String? preview) onPickProduct;
-  final void Function(Uint8List? bytes, String? preview) onPickReceipt;
-  final String? productPreviewDataUrl;
-  final String? receiptPreviewDataUrl;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
+        const SizedBox(height: 32),
         Text(
           'Add your photos',
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-            fontWeight: FontWeight.w700,
-            color: AppColors.textPrimary,
-          ),
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w700,
+                color: AppColors.textPrimary,
+              ),
         ),
         const SizedBox(height: 12),
         Text(
           'Upload a product photo and the receipt so we can verify your claim.',
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-            color: fadeColor(AppColors.textPrimary, 0.7),
-          ),
+                color: fadeColor(AppColors.textPrimary, 0.7),
+              ),
         ),
         const SizedBox(height: 24),
         Row(
           children: [
-           Expanded(
-             child: _PhotoBox(
-               label: 'Product photo',
-               added: productPhotoAdded,
-               previewDataUrl: productPreviewDataUrl,
-               onSelected: onPickProduct,
-             ),
-           ),
+            Expanded(
+              child: _PhotoBox(
+                label: 'Product photo',
+                added: productPhotoAdded,
+                previewDataUrl: productPreviewDataUrl,
+                onSelected: onPickProduct,
+              ),
+            ),
             const SizedBox(width: 16),
-           Expanded(
-             child: _PhotoBox(
-               label: 'Receipt photo',
-               added: receiptPhotoAdded,
-               previewDataUrl: receiptPreviewDataUrl,
-               onSelected: onPickReceipt,
-             ),
-           ),
+            Expanded(
+              child: _PhotoBox(
+                label: 'Receipt photo',
+                added: receiptPhotoAdded,
+                previewDataUrl: receiptPreviewDataUrl,
+                onSelected: onPickReceipt,
+              ),
+            ),
           ],
         ),
       ],

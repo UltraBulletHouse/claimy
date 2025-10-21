@@ -16,7 +16,7 @@ class HomeShell extends StatefulWidget {
   State<HomeShell> createState() => _HomeShellState();
 }
 
-enum _MainMenuAction { defaultCases, defaultRewards, signOut }
+enum _MainMenuAction { signOut }
 
 class _HomeShellState extends State<HomeShell> {
   late HomeLanding _currentView;
@@ -124,24 +124,8 @@ class _HomeShellState extends State<HomeShell> {
                           );
                         },
                         onMenuSelected: (action) {
-                          switch (action) {
-                            case _MainMenuAction.defaultCases:
-                              context.read<AppState>().setLandingPreference(
-                                HomeLanding.cases,
-                              );
-                              setState(() => _currentView = HomeLanding.cases);
-                              break;
-                            case _MainMenuAction.defaultRewards:
-                              context.read<AppState>().setLandingPreference(
-                                HomeLanding.rewards,
-                              );
-                              setState(
-                                () => _currentView = HomeLanding.rewards,
-                              );
-                              break;
-                            case _MainMenuAction.signOut:
-                              context.read<AppState>().signOut();
-                              break;
+                          if (action == _MainMenuAction.signOut) {
+                            context.read<AppState>().signOut();
                           }
                         },
                         showRewards: showRewards,
@@ -321,15 +305,6 @@ class _HomeHeader extends StatelessWidget {
                 borderRadius: BorderRadius.circular(16),
               ),
               itemBuilder: (context) => const [
-                PopupMenuItem(
-                  value: _MainMenuAction.defaultCases,
-                  child: Text('Make My Cases default'),
-                ),
-                PopupMenuItem(
-                  value: _MainMenuAction.defaultRewards,
-                  child: Text('Make My Rewards default'),
-                ),
-                PopupMenuDivider(),
                 PopupMenuItem(
                   value: _MainMenuAction.signOut,
                   child: Text('Sign out'),

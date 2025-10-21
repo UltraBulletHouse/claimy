@@ -18,12 +18,32 @@ class NewCaseScreen extends StatefulWidget {
 
 class _NewCaseScreenState extends State<NewCaseScreen> {
   static const int _stepsCount = 4;
-  final List<String> _stores = const [
-    'FreshMart Market',
-    'TechTown',
-    'HomeGoods Depot',
-    'Daily Grains',
-    'Beauty Loft',
+  static const List<_StoreBrand> _storeBrands = [
+    _StoreBrand(
+      name: 'FreshMart Market',
+      primaryColor: Color(0xFF34C759),
+      icon: Icons.shopping_basket,
+    ),
+    _StoreBrand(
+      name: 'TechTown',
+      primaryColor: Color(0xFF0B84FF),
+      icon: Icons.devices_other,
+    ),
+    _StoreBrand(
+      name: 'HomeGoods Depot',
+      primaryColor: Color(0xFFFF8C42),
+      icon: Icons.weekend,
+    ),
+    _StoreBrand(
+      name: 'Daily Grains',
+      primaryColor: Color(0xFFB48A2C),
+      icon: Icons.restaurant_menu,
+    ),
+    _StoreBrand(
+      name: 'Beauty Loft',
+      primaryColor: Color(0xFFFF6FB7),
+      icon: Icons.spa,
+    ),
   ];
 
   int _currentStep = 0;
@@ -248,7 +268,7 @@ class _NewCaseScreenState extends State<NewCaseScreen> {
     switch (_currentStep) {
       case 0:
         return _StoreStep(
-          stores: _stores,
+          stores: _storeBrands,
           selectedStore: _selectedStore,
           customStore: _customStore,
           customStoreController: _customStoreController,
@@ -262,10 +282,6 @@ class _NewCaseScreenState extends State<NewCaseScreen> {
                 _customStore = false;
               }
             });
-            // Auto-advance when a store is selected or typed
-            if (_currentStep == 0 && _validateCurrentStep()) {
-              _goNext();
-            }
           },
         );
       case 1:
@@ -314,7 +330,7 @@ class _StoreStep extends StatelessWidget {
     required this.onStoreChanged,
   });
 
-  final List<String> stores;
+  final List<_StoreBrand> stores;
   final String? selectedStore;
   final bool customStore;
   final TextEditingController customStoreController;
@@ -340,29 +356,21 @@ class _StoreStep extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 24),
-        DropdownMenu<String>(
-          initialSelection: customStore ? '_custom_' : selectedStore,
-          expandedInsets: EdgeInsets.zero,
-          label: const Text('Store'),
-          dropdownMenuEntries: [
-            ...stores.map(
-              (store) => DropdownMenuEntry<String>(value: store, label: store),
-            ),
-            const DropdownMenuEntry<String>(
-              value: '_custom_',
-              label: 'Other store',
+        Wrap(
+          spacing: 12,
+          runSpacing: 12,
+          children: [
+            for (final store in stores)
+              _StoreSelectionButton(
+                brand: store,
+                isSelected: selectedStore == store.name,
+                onTap: () => onStoreChanged(store.name),
+              ),
+            _OtherStoreButton(
+              isSelected: customStore,
+              onTap: () => onStoreChanged('_custom_'),
             ),
           ],
-          inputDecorationTheme: const InputDecorationTheme(
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.all(Radius.circular(16)),
-            ),
-          ),
-          onSelected: (value) {
-            if (value != null) {
-              onStoreChanged(value);
-            }
-          },
         ),
         if (customStore) ...[
           const SizedBox(height: 16),
@@ -378,6 +386,155 @@ class _StoreStep extends StatelessWidget {
           ),
         ],
       ],
+    );
+  }
+}
+
+class _StoreBrand {
+  const _StoreBrand({
+    required this.name,
+    required this.primaryColor,
+    required this.icon,
+  });
+
+  final String name;
+  final Color primaryColor;
+  final IconData icon;
+}
+
+class _StoreSelectionButton extends StatelessWidget {
+  const _StoreSelectionButton({
+    required this.brand,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  final _StoreBrand brand;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final Color accent = brand.primaryColor;
+    final Color background = isSelected ? accent : fadeColor(accent, 0.12);
+    final Color foreground = isSelected ? Colors.white : accent;
+
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(24),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(24),
+        onTap: onTap,
+        child: Ink(
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+          decoration: BoxDecoration(
+            color: background,
+            borderRadius: BorderRadius.circular(24),
+            boxShadow: isSelected
+                ? [
+                    BoxShadow(
+                      color: fadeColor(accent, 0.32),
+                      blurRadius: 16,
+                      offset: const Offset(0, 6),
+                    ),
+                  ]
+                : null,
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircleAvatar(
+                radius: 18,
+                backgroundColor:
+                    isSelected ? fadeColor(Colors.white, 0.18) : Colors.white,
+                child: Icon(
+                  brand.icon,
+                  color: foreground,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                brand.name,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: foreground,
+                      fontWeight: FontWeight.w600,
+                    ),
+              ),
+              if (isSelected) ...[
+                const SizedBox(width: 8),
+                const Icon(Icons.check_circle, color: Colors.white, size: 18),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _OtherStoreButton extends StatelessWidget {
+  const _OtherStoreButton({
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final Color accent = AppColors.primary;
+    final Color background = isSelected ? accent : fadeColor(accent, 0.12);
+    final Color foreground = isSelected ? Colors.white : accent;
+    final Color avatarBackground =
+        isSelected ? fadeColor(Colors.white, 0.18) : Colors.white;
+
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(24),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(24),
+        onTap: onTap,
+        child: Ink(
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(24),
+            color: background,
+            boxShadow: isSelected
+                ? [
+                    BoxShadow(
+                      color: fadeColor(accent, 0.32),
+                      blurRadius: 16,
+                      offset: const Offset(0, 6),
+                    ),
+                  ]
+                : null,
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircleAvatar(
+                radius: 18,
+                backgroundColor: avatarBackground,
+                child: Icon(Icons.add, color: foreground, size: 20),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                'Other store',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: foreground,
+                      fontWeight: FontWeight.w600,
+                    ),
+              ),
+              if (isSelected) ...[
+                const SizedBox(width: 8),
+                const Icon(Icons.check_circle, color: Colors.white, size: 18),
+              ],
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

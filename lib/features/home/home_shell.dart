@@ -551,6 +551,25 @@ class _CasesViewState extends State<CasesView> {
       return matchesStatus && matchesQuery;
     }).toList();
 
+    final filterConfigs = <_FilterConfig>[
+      _FilterConfig(
+        label: 'All cases',
+        icon: Icons.filter_list_rounded,
+        accent: AppColors.primary,
+        selected: _statusFilter == null,
+        onTap: () => setState(() => _statusFilter = null),
+      ),
+      ...CaseStatus.values.map(
+        (status) => _FilterConfig(
+          label: status.label,
+          icon: status.icon,
+          accent: status.color,
+          selected: _statusFilter == status,
+          onTap: () => setState(() => _statusFilter = status),
+        ),
+      ),
+    ];
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -572,30 +591,40 @@ class _CasesViewState extends State<CasesView> {
           ),
         ),
         const SizedBox(height: 12),
-        SizedBox(
-          height: 46,
-          child: ListView(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            scrollDirection: Axis.horizontal,
-            children: [
-              FilterChip(
-                label: const Text('All'),
-                selected: _statusFilter == null,
-                onSelected: (_) => setState(() => _statusFilter = null),
-              ),
-              const SizedBox(width: 8),
-              ...CaseStatus.values.map(
-                (status) => Padding(
-                  padding: const EdgeInsets.only(right: 8),
-                  child: FilterChip(
-                    label: Text(status.label),
-                    selectedColor: status.backgroundColor,
-                    selected: _statusFilter == status,
-                    onSelected: (_) => setState(() => _statusFilter = status),
-                  ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              const columns = 3;
+              const spacing = 10.0;
+              final double totalSpacing = spacing * (columns - 1);
+              final double buttonWidth =
+                  (constraints.maxWidth - totalSpacing) / columns;
+              final bool compact = buttonWidth < 120;
+
+              return GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: filterConfigs.length,
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: columns,
+                  crossAxisSpacing: spacing,
+                  mainAxisSpacing: spacing,
+                  childAspectRatio: compact ? 2.35 : 2.6,
                 ),
-              ),
-            ],
+                itemBuilder: (context, index) {
+                  final config = filterConfigs[index];
+                  return _CaseFilterButton(
+                    label: config.label,
+                    icon: config.icon,
+                    accent: config.accent,
+                    selected: config.selected,
+                    onTap: config.onTap,
+                    compact: compact,
+                  );
+                },
+              );
+            },
           ),
         ),
         const SizedBox(height: 16),
@@ -622,6 +651,110 @@ class _CasesViewState extends State<CasesView> {
       ],
     );
   }
+}
+
+class _CaseFilterButton extends StatelessWidget {
+  const _CaseFilterButton({
+    required this.label,
+    required this.icon,
+    required this.accent,
+    required this.selected,
+    required this.onTap,
+    this.compact = false,
+  });
+
+  final String label;
+  final IconData icon;
+  final Color accent;
+  final bool selected;
+  final VoidCallback onTap;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    final Gradient? gradient = selected
+        ? LinearGradient(
+            colors: [
+              accent,
+              Color.lerp(accent, Colors.white, 0.25)!,
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          )
+        : null;
+    final Color borderColor = selected
+        ? fadeColor(accent, 0.32)
+        : fadeColor(AppColors.textPrimary, 0.12);
+    final BoxShadow shadow = BoxShadow(
+      color: fadeColor(selected ? accent : Colors.black, selected ? 0.28 : 0.07),
+      blurRadius: selected ? 18 : 12,
+      offset: const Offset(0, 8),
+    );
+
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(16),
+      child: Ink(
+        decoration: BoxDecoration(
+          color: selected ? null : Colors.white,
+          gradient: gradient,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: borderColor),
+          boxShadow: [shadow],
+        ),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: onTap,
+          child: Padding(
+            padding: EdgeInsets.symmetric(
+              horizontal: compact ? 10 : 14,
+              vertical: compact ? 8 : 10,
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  icon,
+                  size: compact ? 16 : 18,
+                  color: selected ? Colors.white : accent,
+                ),
+                SizedBox(width: compact ? 6 : 8),
+                Text(
+                  label,
+                  style: textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: selected
+                            ? Colors.white
+                            : fadeColor(AppColors.textPrimary, 0.85),
+                        fontSize: compact
+                            ? (textTheme.bodySmall?.fontSize ?? 12.0)
+                            : (textTheme.bodyMedium?.fontSize ?? 14.0),
+                        letterSpacing: compact ? 0 : 0.1),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _FilterConfig {
+  const _FilterConfig({
+    required this.label,
+    required this.icon,
+    required this.accent,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final IconData icon;
+  final Color accent;
+  final bool selected;
+  final VoidCallback onTap;
 }
 
 class RewardsView extends StatelessWidget {

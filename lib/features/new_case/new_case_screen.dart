@@ -355,21 +355,39 @@ class _StoreStep extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 24),
-        Wrap(
-          spacing: 12,
-          runSpacing: 12,
-          children: [
-            for (final store in stores)
-              _StoreSelectionButton(
-                brand: store,
-                isSelected: selectedStore == store.name,
-                onTap: () => onStoreChanged(store.name),
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final bool isNarrow = constraints.maxWidth < 520;
+            final storeButtons = [
+              for (final store in stores)
+                _StoreSelectionButton(
+                  brand: store,
+                  isSelected: selectedStore == store.name,
+                  onTap: () => onStoreChanged(store.name),
+                  expand: isNarrow,
+                ),
+              _OtherStoreButton(
+                isSelected: customStore,
+                onTap: () => onStoreChanged('_custom_'),
+                expand: isNarrow,
               ),
-            _OtherStoreButton(
-              isSelected: customStore,
-              onTap: () => onStoreChanged('_custom_'),
-            ),
-          ],
+            ];
+
+            if (isNarrow) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  for (int i = 0; i < storeButtons.length; i++) ...[
+                    storeButtons[i],
+                    if (i != storeButtons.length - 1)
+                      const SizedBox(height: 12),
+                  ],
+                ],
+              );
+            }
+
+            return Wrap(spacing: 12, runSpacing: 12, children: storeButtons);
+          },
         ),
         if (customStore) ...[
           const SizedBox(height: 16),
@@ -406,11 +424,13 @@ class _StoreSelectionButton extends StatelessWidget {
     required this.brand,
     required this.isSelected,
     required this.onTap,
+    this.expand = false,
   });
 
   final _StoreBrand brand;
   final bool isSelected;
   final VoidCallback onTap;
+  final bool expand;
 
   @override
   Widget build(BuildContext context) {
@@ -418,62 +438,85 @@ class _StoreSelectionButton extends StatelessWidget {
     final Color background = isSelected ? accent : fadeColor(accent, 0.12);
     final Color foreground = isSelected ? Colors.white : accent;
 
+    Widget button = Ink(
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: isSelected
+            ? [
+                BoxShadow(
+                  color: fadeColor(accent, 0.32),
+                  blurRadius: 16,
+                  offset: const Offset(0, 6),
+                ),
+              ]
+            : null,
+      ),
+      child: Row(
+        mainAxisSize: expand ? MainAxisSize.max : MainAxisSize.min,
+        children: [
+          CircleAvatar(
+            radius: 18,
+            backgroundColor: isSelected
+                ? fadeColor(Colors.white, 0.18)
+                : Colors.white,
+            child: Icon(brand.icon, color: foreground, size: 20),
+          ),
+          const SizedBox(width: 12),
+          if (expand)
+            Expanded(
+              child: Text(
+                brand.name,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: foreground,
+                  fontWeight: FontWeight.w600,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+            )
+          else
+            Text(
+              brand.name,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: foreground,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          if (isSelected) ...[
+            const SizedBox(width: 12),
+            const Icon(Icons.check_circle, color: Colors.white, size: 18),
+          ],
+        ],
+      ),
+    );
+
+    if (expand) {
+      button = SizedBox(width: double.infinity, child: button);
+    }
+
     return Material(
       color: Colors.transparent,
       borderRadius: BorderRadius.circular(24),
       child: InkWell(
         borderRadius: BorderRadius.circular(24),
         onTap: onTap,
-        child: Ink(
-          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-          decoration: BoxDecoration(
-            color: background,
-            borderRadius: BorderRadius.circular(24),
-            boxShadow: isSelected
-                ? [
-                    BoxShadow(
-                      color: fadeColor(accent, 0.32),
-                      blurRadius: 16,
-                      offset: const Offset(0, 6),
-                    ),
-                  ]
-                : null,
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              CircleAvatar(
-                radius: 18,
-                backgroundColor: isSelected
-                    ? fadeColor(Colors.white, 0.18)
-                    : Colors.white,
-                child: Icon(brand.icon, color: foreground, size: 20),
-              ),
-              const SizedBox(width: 12),
-              Text(
-                brand.name,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: foreground,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              if (isSelected) ...[
-                const SizedBox(width: 8),
-                const Icon(Icons.check_circle, color: Colors.white, size: 18),
-              ],
-            ],
-          ),
-        ),
+        child: button,
       ),
     );
   }
 }
 
 class _OtherStoreButton extends StatelessWidget {
-  const _OtherStoreButton({required this.isSelected, required this.onTap});
+  const _OtherStoreButton({
+    required this.isSelected,
+    required this.onTap,
+    this.expand = false,
+  });
 
   final bool isSelected;
   final VoidCallback onTap;
+  final bool expand;
 
   @override
   Widget build(BuildContext context) {
@@ -484,50 +527,68 @@ class _OtherStoreButton extends StatelessWidget {
         ? fadeColor(Colors.white, 0.18)
         : Colors.white;
 
+    Widget button = Ink(
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(24),
+        color: background,
+        boxShadow: isSelected
+            ? [
+                BoxShadow(
+                  color: fadeColor(accent, 0.32),
+                  blurRadius: 16,
+                  offset: const Offset(0, 6),
+                ),
+              ]
+            : null,
+      ),
+      child: Row(
+        mainAxisSize: expand ? MainAxisSize.max : MainAxisSize.min,
+        children: [
+          CircleAvatar(
+            radius: 18,
+            backgroundColor: avatarBackground,
+            child: Icon(Icons.add, color: foreground, size: 20),
+          ),
+          const SizedBox(width: 12),
+          if (expand)
+            Expanded(
+              child: Text(
+                'Other store',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: foreground,
+                  fontWeight: FontWeight.w600,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+            )
+          else
+            Text(
+              'Other store',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: foreground,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          if (isSelected) ...[
+            const SizedBox(width: 12),
+            const Icon(Icons.check_circle, color: Colors.white, size: 18),
+          ],
+        ],
+      ),
+    );
+
+    if (expand) {
+      button = SizedBox(width: double.infinity, child: button);
+    }
+
     return Material(
       color: Colors.transparent,
       borderRadius: BorderRadius.circular(24),
       child: InkWell(
         borderRadius: BorderRadius.circular(24),
         onTap: onTap,
-        child: Ink(
-          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(24),
-            color: background,
-            boxShadow: isSelected
-                ? [
-                    BoxShadow(
-                      color: fadeColor(accent, 0.32),
-                      blurRadius: 16,
-                      offset: const Offset(0, 6),
-                    ),
-                  ]
-                : null,
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              CircleAvatar(
-                radius: 18,
-                backgroundColor: avatarBackground,
-                child: Icon(Icons.add, color: foreground, size: 20),
-              ),
-              const SizedBox(width: 12),
-              Text(
-                'Other store',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: foreground,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              if (isSelected) ...[
-                const SizedBox(width: 8),
-                const Icon(Icons.check_circle, color: Colors.white, size: 18),
-              ],
-            ],
-          ),
-        ),
+        child: button,
       ),
     );
   }

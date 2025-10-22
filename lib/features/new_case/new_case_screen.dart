@@ -122,87 +122,87 @@ class _NewCaseScreenState extends State<NewCaseScreen> {
     }
   }
 
- Future<void> _submit() async {
-   if (_isSubmitting) return;
-   setState(() => _isSubmitting = true);
-   try {
-     if (!_validateCurrentStep()) {
-       return;
-     }
-     final store = _customStore
-         ? _customStoreController.text.trim()
-         : _selectedStore!;
-     final product = _productController.text.trim();
-     final description = _descriptionController.text.trim();
+  Future<void> _submit() async {
+    if (_isSubmitting) return;
+    setState(() => _isSubmitting = true);
+    try {
+      if (!_validateCurrentStep()) {
+        return;
+      }
+      final store = _customStore
+          ? _customStoreController.text.trim()
+          : _selectedStore!;
+      final product = _productController.text.trim();
+      final description = _descriptionController.text.trim();
 
-     String? productUrl;
-     String? receiptUrl;
+      String? productUrl;
+      String? receiptUrl;
 
-     // Upload images first if present
-     try {
-       if (_productBytes != null || _receiptBytes != null) {
-         setState(() => _uploading = true);
-         final uploader = UploadsApi();
-         final res = await uploader.uploadImages(
-           productBytes: _productBytes,
-           receiptBytes: _receiptBytes,
-         );
-         productUrl = res.productImageUrl;
-         receiptUrl = res.receiptImageUrl;
-       }
-     } catch (e) {
-       if (!mounted) return;
-       ScaffoldMessenger.of(context).showSnackBar(
-         SnackBar(content: Text('Image upload failed: $e')),
-       );
-       return;
-     } finally {
-       if (mounted) setState(() => _uploading = false);
-     }
+      // Upload images first if present
+      try {
+        if (_productBytes != null || _receiptBytes != null) {
+          setState(() => _uploading = true);
+          final uploader = UploadsApi();
+          final res = await uploader.uploadImages(
+            productBytes: _productBytes,
+            receiptBytes: _receiptBytes,
+          );
+          productUrl = res.productImageUrl;
+          receiptUrl = res.receiptImageUrl;
+        }
+      } catch (e) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Image upload failed: $e')));
+        return;
+      } finally {
+        if (mounted) setState(() => _uploading = false);
+      }
 
-     // Submit to backend
-     try {
-       final api = ComplaintsApi();
-       final images = <String>[
-         if (productUrl != null) productUrl,
-         if (receiptUrl != null) receiptUrl,
-       ];
-       final result = await api.submitComplaint(
-         store: store,
-         product: product,
-         description: description.isEmpty ? null : description,
-         images: images,
-       );
-       if (result.ok) {
-         await context.read<AppState>().createCase(
-           storeName: store,
-           productName: product,
-           description: description,
-           includedProductPhoto: _productPhotoAdded,
-           includedReceiptPhoto: _receiptPhotoAdded,
-           alreadySubmitted: true,
-         );
-         if (!mounted) return;
-         ScaffoldMessenger.of(context).showSnackBar(
-           const SnackBar(content: Text('Claim submitted successfully.')),
-         );
-         Navigator.of(context).pop(true);
-       } else {
-         if (!mounted) return;
-         ScaffoldMessenger.of(context).showSnackBar(
-           SnackBar(content: Text(result.message ?? 'Submission failed.')),
-         );
-       }
-     } catch (e) {
-       if (!mounted) return;
-       ScaffoldMessenger.of(context).showSnackBar(
-         SnackBar(content: Text('Failed to submit: $e')),
-       );
-     }
-   } finally {
-     if (mounted) setState(() => _isSubmitting = false);
-   }
- }
+      // Submit to backend
+      try {
+        final api = ComplaintsApi();
+        final images = <String>[
+          if (productUrl != null) productUrl,
+          if (receiptUrl != null) receiptUrl,
+        ];
+        final result = await api.submitComplaint(
+          store: store,
+          product: product,
+          description: description.isEmpty ? null : description,
+          images: images,
+        );
+        if (result.ok) {
+          await context.read<AppState>().createCase(
+            storeName: store,
+            productName: product,
+            description: description,
+            includedProductPhoto: _productPhotoAdded,
+            includedReceiptPhoto: _receiptPhotoAdded,
+            alreadySubmitted: true,
+          );
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Claim submitted successfully.')),
+          );
+          Navigator.of(context).pop(true);
+        } else {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(result.message ?? 'Submission failed.')),
+          );
+        }
+      } catch (e) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to submit: $e')));
+      }
+    } finally {
+      if (mounted) setState(() => _isSubmitting = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -246,14 +246,22 @@ class _NewCaseScreenState extends State<NewCaseScreen> {
               if (_currentStep > 0) const SizedBox(width: 12),
               Expanded(
                 flex: _currentStep > 0 ? 2 : 1,
-               child: ElevatedButton(
-                 onPressed: (_isSubmitting || _uploading) ? null : _handlePrimaryAction,
-                 child: (_isSubmitting || _uploading)
-                     ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                     : Text(
-                         _currentStep == _stepsCount - 1 ? 'Submit claim' : 'Continue',
-                       ),
-               ),
+                child: ElevatedButton(
+                  onPressed: (_isSubmitting || _uploading)
+                      ? null
+                      : _handlePrimaryAction,
+                  child: (_isSubmitting || _uploading)
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : Text(
+                          _currentStep == _stepsCount - 1
+                              ? 'Submit claim'
+                              : 'Continue',
+                        ),
+                ),
               ),
             ],
           ),
@@ -436,21 +444,18 @@ class _StoreSelectionButton extends StatelessWidget {
             children: [
               CircleAvatar(
                 radius: 18,
-                backgroundColor:
-                    isSelected ? fadeColor(Colors.white, 0.18) : Colors.white,
-                child: Icon(
-                  brand.icon,
-                  color: foreground,
-                  size: 20,
-                ),
+                backgroundColor: isSelected
+                    ? fadeColor(Colors.white, 0.18)
+                    : Colors.white,
+                child: Icon(brand.icon, color: foreground, size: 20),
               ),
               const SizedBox(width: 12),
               Text(
                 brand.name,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: foreground,
-                      fontWeight: FontWeight.w600,
-                    ),
+                  color: foreground,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
               if (isSelected) ...[
                 const SizedBox(width: 8),
@@ -465,10 +470,7 @@ class _StoreSelectionButton extends StatelessWidget {
 }
 
 class _OtherStoreButton extends StatelessWidget {
-  const _OtherStoreButton({
-    required this.isSelected,
-    required this.onTap,
-  });
+  const _OtherStoreButton({required this.isSelected, required this.onTap});
 
   final bool isSelected;
   final VoidCallback onTap;
@@ -478,8 +480,9 @@ class _OtherStoreButton extends StatelessWidget {
     final Color accent = AppColors.primary;
     final Color background = isSelected ? accent : fadeColor(accent, 0.12);
     final Color foreground = isSelected ? Colors.white : accent;
-    final Color avatarBackground =
-        isSelected ? fadeColor(Colors.white, 0.18) : Colors.white;
+    final Color avatarBackground = isSelected
+        ? fadeColor(Colors.white, 0.18)
+        : Colors.white;
 
     return Material(
       color: Colors.transparent,
@@ -514,9 +517,9 @@ class _OtherStoreButton extends StatelessWidget {
               Text(
                 'Other store',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: foreground,
-                      fontWeight: FontWeight.w600,
-                    ),
+                  color: foreground,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
               if (isSelected) ...[
                 const SizedBox(width: 8),
@@ -583,16 +586,16 @@ class _ProductStep extends StatelessWidget {
         Text(
           'Add your photos',
           style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w700,
-                color: AppColors.textPrimary,
-              ),
+            fontWeight: FontWeight.w700,
+            color: AppColors.textPrimary,
+          ),
         ),
         const SizedBox(height: 12),
         Text(
           'Upload a product photo and the receipt so we can verify your claim.',
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: fadeColor(AppColors.textPrimary, 0.7),
-              ),
+            color: fadeColor(AppColors.textPrimary, 0.7),
+          ),
         ),
         const SizedBox(height: 24),
         Row(
@@ -636,7 +639,11 @@ class _PhotoBox extends StatelessWidget {
 
   bool _isValidImage(String name, int size) {
     final lower = name.toLowerCase();
-    final okExt = lower.endsWith('.jpg') || lower.endsWith('.jpeg') || lower.endsWith('.png') || lower.endsWith('.webp');
+    final okExt =
+        lower.endsWith('.jpg') ||
+        lower.endsWith('.jpeg') ||
+        lower.endsWith('.png') ||
+        lower.endsWith('.webp');
     if (!okExt) return false;
     // 5 MB limit
     if (size > 5 * 1024 * 1024) return false;
@@ -655,7 +662,11 @@ class _PhotoBox extends StatelessWidget {
       final file = res.files.first;
       if (!_isValidImage(file.name, file.size)) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Please choose an image under 5 MB (jpg, png, webp).')),
+          const SnackBar(
+            content: Text(
+              'Please choose an image under 5 MB (jpg, png, webp).',
+            ),
+          ),
         );
         return;
       }
@@ -666,12 +677,12 @@ class _PhotoBox extends StatelessWidget {
         );
         return;
       }
-      final preview = 'data:image/*;base64,' + base64Encode(bytes);
+      final preview = 'data:image/*;base64,${base64Encode(bytes)}';
       onSelected(bytes, preview);
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to pick file: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Failed to pick file: $e')));
     }
   }
 

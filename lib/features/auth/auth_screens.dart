@@ -376,7 +376,6 @@ class _AccentOrb extends StatelessWidget {
   final Color? strokeColor;
 
   const _AccentOrb({
-    super.key,
     required this.size,
     required this.colors,
     this.strokeColor,

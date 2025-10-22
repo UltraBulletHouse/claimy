@@ -304,7 +304,7 @@ class AppState extends ChangeNotifier {
       receiptImageUrl:
           ((m['receiptImageUrl'] ?? m['receipt_image_url'])
                   ?.toString()
-                  ?.isNotEmpty ??
+                  .isNotEmpty ??
               false)
           ? (m['receiptImageUrl'] ?? m['receipt_image_url']).toString()
           : (images.length > 1 ? images[1]?.toString() : null),

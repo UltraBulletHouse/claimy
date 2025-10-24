@@ -25,8 +25,6 @@ class _NewCaseScreenState extends State<NewCaseScreen> {
   String? _selectedStoreName;
   bool _storesLoading = false;
   String? _storesError;
-  bool _customStore = false;
-  final TextEditingController _customStoreController = TextEditingController();
   final TextEditingController _productController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
   bool _productPhotoAdded = false;
@@ -138,7 +136,6 @@ class _NewCaseScreenState extends State<NewCaseScreen> {
 
   @override
   void dispose() {
-    _customStoreController.dispose();
     _productController.dispose();
     _descriptionController.dispose();
     super.dispose();
@@ -158,21 +155,13 @@ class _NewCaseScreenState extends State<NewCaseScreen> {
   bool _validateCurrentStep() {
     switch (_currentStep) {
       case 0:
-        if (_customStore) {
-          if (_customStoreController.text.trim().isEmpty) {
-            _showMessage('Type the store name to continue.');
-            return false;
-          }
-          return true;
-        } else {
-          final hasSelection =
-              _selectedStoreId != null && (_selectedStoreName?.isNotEmpty ?? false);
-          if (!hasSelection) {
-            _showMessage('Select a store to continue.');
-            return false;
-          }
-          return true;
+        final hasSelection =
+            _selectedStoreId != null && (_selectedStoreName?.isNotEmpty ?? false);
+        if (!hasSelection) {
+          _showMessage('Select a store to continue.');
+          return false;
         }
+        return true;
       case 1:
         if (_productController.text.trim().isEmpty) {
           _showMessage('Tell us the product name.');
@@ -211,9 +200,7 @@ class _NewCaseScreenState extends State<NewCaseScreen> {
       if (!_validateCurrentStep()) {
         return;
       }
-      final store = _customStore
-          ? _customStoreController.text.trim()
-          : (_selectedStoreName ?? '');
+      final store = _selectedStoreName ?? '';
       if (store.isEmpty) {
         _showMessage('Select a store to continue.');
         return;
@@ -362,27 +349,16 @@ class _NewCaseScreenState extends State<NewCaseScreen> {
         return _StoreStep(
           stores: _storeBrands,
           selectedStoreId: _selectedStoreId,
-          customStore: _customStore,
-          customStoreController: _customStoreController,
           onStoreChanged: (value) {
             setState(() {
-              if (value == '_custom_') {
+              final matches =
+                  _storeBrands.where((store) => store.storeId == value).toList();
+              if (matches.isEmpty) {
                 _selectedStoreId = null;
                 _selectedStoreName = null;
-                _customStore = true;
               } else {
-                final matches = _storeBrands
-                    .where((store) => store.storeId == value)
-                    .toList();
-                if (matches.isEmpty) {
-                  _selectedStoreId = null;
-                  _selectedStoreName = null;
-                } else {
-                  _selectedStoreId = value;
-                  _selectedStoreName = matches.first.name;
-                }
-                _customStore = false;
-                _customStoreController.clear();
+                _selectedStoreId = value;
+                _selectedStoreName = matches.first.name;
               }
             });
           },
@@ -426,8 +402,6 @@ class _StoreStep extends StatelessWidget {
   const _StoreStep({
     required this.stores,
     required this.selectedStoreId,
-    required this.customStore,
-    required this.customStoreController,
     required this.onStoreChanged,
     required this.isLoading,
     required this.onRetry,
@@ -436,8 +410,6 @@ class _StoreStep extends StatelessWidget {
 
   final List<_StoreBrand> stores;
   final String? selectedStoreId;
-  final bool customStore;
-  final TextEditingController customStoreController;
   final ValueChanged<String> onStoreChanged;
   final bool isLoading;
   final String? error;
@@ -480,7 +452,7 @@ class _StoreStep extends StatelessWidget {
               borderRadius: BorderRadius.circular(12),
             ),
             child: Text(
-              'No stores are configured yet. You can still continue with "Other store".',
+              'No stores are configured yet. Ask support to configure store options.',
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: fadeColor(AppColors.textPrimary, 0.8),
               ),
@@ -500,7 +472,7 @@ class _StoreStep extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'We couldn\'t refresh the store list. You can retry or choose another store manually.',
+                  'We couldn\'t refresh the store list. Please retry or try again shortly.',
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: AppColors.textPrimary,
                   ),
@@ -522,53 +494,20 @@ class _StoreStep extends StatelessWidget {
           const LinearProgressIndicator(minHeight: 2),
           const SizedBox(height: 16),
         ],
-        LayoutBuilder(
-          builder: (context, constraints) {
-            final bool isNarrow = constraints.maxWidth < 520;
-            final storeButtons = [
-              for (final store in stores)
-                _StoreSelectionButton(
-                  brand: store,
-                  isSelected: selectedStoreId == store.storeId,
-                  onTap: () => onStoreChanged(store.storeId),
-                  expand: isNarrow,
-                ),
-              _OtherStoreButton(
-                isSelected: customStore,
-                onTap: () => onStoreChanged('_custom_'),
-                expand: isNarrow,
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            for (int i = 0; i < stores.length; i++) ...[
+              _StoreSelectionButton(
+                brand: stores[i],
+                isSelected: selectedStoreId == stores[i].storeId,
+                onTap: () => onStoreChanged(stores[i].storeId),
+                expand: true,
               ),
-            ];
-
-            if (isNarrow) {
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  for (int i = 0; i < storeButtons.length; i++) ...[
-                    storeButtons[i],
-                    if (i != storeButtons.length - 1)
-                      const SizedBox(height: 12),
-                  ],
-                ],
-              );
-            }
-
-            return Wrap(spacing: 12, runSpacing: 12, children: storeButtons);
-          },
+              if (i != stores.length - 1) const SizedBox(height: 12),
+            ],
+          ],
         ),
-        if (customStore) ...[
-          const SizedBox(height: 16),
-          TextField(
-            controller: customStoreController,
-            decoration: const InputDecoration(
-              labelText: 'Store name',
-              hintText: 'Type the store name',
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.all(Radius.circular(16)),
-              ),
-            ),
-          ),
-        ],
       ],
     );
   }
@@ -612,9 +551,10 @@ class _StoreSelectionButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
-    final Color accent = brand.primaryColor;
-    final Color background = isSelected ? accent : fadeColor(accent, 0.12);
-    final Color foreground = isSelected ? Colors.white : accent;
+    final Color baseColor = brand.primaryColor;
+    final Color background = baseColor;
+    final Color foreground = Colors.black87;
+    final Color borderColor = isSelected ? Colors.black87 : fadeColor(Colors.black, 0.1);
     final TextStyle avatarTextStyle = (textTheme.labelLarge ??
             const TextStyle(
               fontSize: 16,
@@ -638,24 +578,21 @@ class _StoreSelectionButton extends StatelessWidget {
       decoration: BoxDecoration(
         color: background,
         borderRadius: BorderRadius.circular(24),
-        boxShadow: isSelected
-            ? [
-                BoxShadow(
-                  color: fadeColor(accent, 0.32),
-                  blurRadius: 16,
-                  offset: const Offset(0, 6),
-                ),
-              ]
-            : null,
+        border: Border.all(color: borderColor, width: 2),
+        boxShadow: [
+          BoxShadow(
+            color: fadeColor(baseColor, isSelected ? 0.35 : 0.18),
+            blurRadius: isSelected ? 14 : 8,
+            offset: const Offset(0, 6),
+          ),
+        ],
       ),
       child: Row(
         mainAxisSize: expand ? MainAxisSize.max : MainAxisSize.min,
         children: [
           CircleAvatar(
             radius: 18,
-            backgroundColor: isSelected
-                ? fadeColor(Colors.white, 0.18)
-                : Colors.white,
+            backgroundColor: Colors.white.withOpacity(0.75),
             child: Text(
               brand.initials,
               style: avatarTextStyle,
@@ -677,94 +614,7 @@ class _StoreSelectionButton extends StatelessWidget {
             ),
           if (isSelected) ...[
             const SizedBox(width: 12),
-            const Icon(Icons.check_circle, color: Colors.white, size: 18),
-          ],
-        ],
-      ),
-    );
-
-    if (expand) {
-      button = SizedBox(width: double.infinity, child: button);
-    }
-
-    return Material(
-      color: Colors.transparent,
-      borderRadius: BorderRadius.circular(24),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(24),
-        onTap: onTap,
-        child: button,
-      ),
-    );
-  }
-}
-
-class _OtherStoreButton extends StatelessWidget {
-  const _OtherStoreButton({
-    required this.isSelected,
-    required this.onTap,
-    this.expand = false,
-  });
-
-  final bool isSelected;
-  final VoidCallback onTap;
-  final bool expand;
-
-  @override
-  Widget build(BuildContext context) {
-    final Color accent = AppColors.primary;
-    final Color background = isSelected ? accent : fadeColor(accent, 0.12);
-    final Color foreground = isSelected ? Colors.white : accent;
-    final Color avatarBackground = isSelected
-        ? fadeColor(Colors.white, 0.18)
-        : Colors.white;
-
-    Widget button = Ink(
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24),
-        color: background,
-        boxShadow: isSelected
-            ? [
-                BoxShadow(
-                  color: fadeColor(accent, 0.32),
-                  blurRadius: 16,
-                  offset: const Offset(0, 6),
-                ),
-              ]
-            : null,
-      ),
-      child: Row(
-        mainAxisSize: expand ? MainAxisSize.max : MainAxisSize.min,
-        children: [
-          CircleAvatar(
-            radius: 18,
-            backgroundColor: avatarBackground,
-            child: Icon(Icons.add, color: foreground, size: 20),
-          ),
-          const SizedBox(width: 12),
-          if (expand)
-            Expanded(
-              child: Text(
-                'Other store',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: foreground,
-                  fontWeight: FontWeight.w600,
-                ),
-                overflow: TextOverflow.ellipsis,
-              ),
-            )
-          else
-            Text(
-              'Other store',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: foreground,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          if (isSelected) ...[
-            const SizedBox(width: 12),
-            const Icon(Icons.check_circle, color: Colors.white, size: 18),
+            const Icon(Icons.check_circle, color: Colors.black87, size: 18),
           ],
         ],
       ),

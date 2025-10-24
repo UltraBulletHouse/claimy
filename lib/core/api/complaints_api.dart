@@ -46,6 +46,66 @@ class ComplaintsApi {
 
   final String _baseUrl;
 
+  Future<List<StoreCatalogEntry>> getStoreCatalog() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      throw SubmitException('Not authenticated', statusCode: 401);
+    }
+    final idToken = await user.getIdToken(true);
+
+    final resp = await http.get(
+      _url('/api/stores'),
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': 'Bearer $idToken',
+      },
+    );
+
+    if (resp.statusCode >= 200 && resp.statusCode < 300) {
+      final decoded = jsonDecode(resp.body) as Map<String, dynamic>;
+      final rawItems = decoded['items'];
+      final List<StoreCatalogEntry> stores = [];
+      if (rawItems is List) {
+        for (final item in rawItems) {
+          if (item is Map<String, dynamic>) {
+            final storeId = item['storeId']?.toString();
+            final name = item['name']?.toString();
+            final primaryColor = item['primaryColor']?.toString();
+            final email = item['email']?.toString();
+            if (storeId != null &&
+                name != null &&
+                primaryColor != null &&
+                email != null &&
+                storeId.isNotEmpty &&
+                name.isNotEmpty &&
+                primaryColor.isNotEmpty &&
+                email.isNotEmpty) {
+              stores.add(
+                StoreCatalogEntry(
+                  storeId: storeId,
+                  name: name,
+                  primaryColor: primaryColor,
+                  email: email,
+                ),
+              );
+            }
+          }
+        }
+      }
+      return stores;
+    }
+
+    String message;
+    try {
+      final data = jsonDecode(resp.body) as Map<String, dynamic>;
+      message =
+          data['error']?.toString() ?? 'Request failed (${resp.statusCode})';
+    } catch (_) {
+      message = 'Request failed (${resp.statusCode})';
+    }
+    throw SubmitException(message, statusCode: resp.statusCode);
+  }
+
   static String _detectBaseUrl() {
     // Default dev backend
     const local = 'http://localhost:3000';
@@ -133,7 +193,21 @@ class GetCasesResult {
  final List<Map<String, dynamic>> items;
  final int total;
  final int limit;
- final int offset;
+  final int offset;
+}
+
+class StoreCatalogEntry {
+  StoreCatalogEntry({
+    required this.storeId,
+    required this.name,
+    required this.primaryColor,
+    required this.email,
+  });
+
+  final String storeId;
+  final String name;
+  final String primaryColor;
+  final String email;
 }
 
 class SubmitResult {

@@ -18,36 +18,13 @@ class NewCaseScreen extends StatefulWidget {
 
 class _NewCaseScreenState extends State<NewCaseScreen> {
   static const int _stepsCount = 3;
-  static const List<_StoreBrand> _storeBrands = [
-    _StoreBrand(
-      name: 'FreshMart Market',
-      primaryColor: Color(0xFF34C759),
-      icon: Icons.shopping_basket,
-    ),
-    _StoreBrand(
-      name: 'TechTown',
-      primaryColor: Color(0xFF0B84FF),
-      icon: Icons.devices_other,
-    ),
-    _StoreBrand(
-      name: 'HomeGoods Depot',
-      primaryColor: Color(0xFFFF8C42),
-      icon: Icons.weekend,
-    ),
-    _StoreBrand(
-      name: 'Daily Grains',
-      primaryColor: Color(0xFFB48A2C),
-      icon: Icons.restaurant_menu,
-    ),
-    _StoreBrand(
-      name: 'Beauty Loft',
-      primaryColor: Color(0xFFFF6FB7),
-      icon: Icons.spa,
-    ),
-  ];
+  List<_StoreBrand> _storeBrands = const [];
 
   int _currentStep = 0;
-  String? _selectedStore;
+  String? _selectedStoreId;
+  String? _selectedStoreName;
+  bool _storesLoading = false;
+  String? _storesError;
   bool _customStore = false;
   final TextEditingController _customStoreController = TextEditingController();
   final TextEditingController _productController = TextEditingController();
@@ -62,6 +39,102 @@ class _NewCaseScreenState extends State<NewCaseScreen> {
   String? _receiptPreviewDataUrl;
 
   bool _uploading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadStores();
+  }
+
+  Future<void> _loadStores() async {
+    if (_storesLoading) {
+      return;
+    }
+    setState(() {
+      _storesLoading = true;
+      _storesError = null;
+    });
+
+    List<_StoreBrand> nextStores = const [];
+    String? loadError;
+
+    try {
+      final api = ComplaintsApi();
+      final entries = await api.getStoreCatalog();
+      nextStores = entries
+          .map(
+            (entry) => _StoreBrand(
+              storeId: entry.storeId,
+              name: entry.name,
+              primaryColor: _parseColor(entry.primaryColor),
+              email: entry.email,
+            ),
+          )
+          .toList(growable: false);
+    } catch (err) {
+      loadError = err.toString();
+    }
+
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      _storesLoading = false;
+      if (loadError != null) {
+        _storesError = loadError;
+      } else {
+        _storesError = null;
+        _storeBrands = nextStores;
+        if (_storeBrands.isEmpty) {
+          _selectedStoreId = null;
+          _selectedStoreName = null;
+        } else if (_selectedStoreId != null) {
+          final matches = _storeBrands
+              .where((store) => store.storeId == _selectedStoreId)
+              .toList();
+          if (matches.isEmpty) {
+            _selectedStoreId = null;
+            _selectedStoreName = null;
+          } else {
+            _selectedStoreName = matches.first.name;
+          }
+        }
+      }
+    });
+
+    if (loadError != null && mounted) {
+      _showMessage('Failed to load stores: $loadError');
+    }
+  }
+
+  Color _parseColor(String value) {
+    final trimmed = value.trim();
+    if (trimmed.isEmpty) {
+      return AppColors.primary;
+    }
+
+    String hex = trimmed;
+    if (hex.startsWith('#')) {
+      hex = hex.substring(1);
+    } else if (hex.startsWith('0x')) {
+      hex = hex.substring(2);
+    }
+
+    if (hex.length == 6) {
+      final parsed = int.tryParse(hex, radix: 16);
+      if (parsed != null) {
+        return Color(0xFF000000 | parsed);
+      }
+    } else if (hex.length == 8) {
+      final parsed = int.tryParse(hex, radix: 16);
+      if (parsed != null) {
+        return Color(parsed);
+      }
+    }
+
+    return AppColors.primary;
+  }
 
   @override
   void dispose() {
@@ -85,12 +158,21 @@ class _NewCaseScreenState extends State<NewCaseScreen> {
   bool _validateCurrentStep() {
     switch (_currentStep) {
       case 0:
-        if ((_selectedStore == null || _selectedStore!.isEmpty) &&
-            _customStoreController.text.trim().isEmpty) {
-          _showMessage('Select a store to continue.');
-          return false;
+        if (_customStore) {
+          if (_customStoreController.text.trim().isEmpty) {
+            _showMessage('Type the store name to continue.');
+            return false;
+          }
+          return true;
+        } else {
+          final hasSelection =
+              _selectedStoreId != null && (_selectedStoreName?.isNotEmpty ?? false);
+          if (!hasSelection) {
+            _showMessage('Select a store to continue.');
+            return false;
+          }
+          return true;
         }
-        return true;
       case 1:
         if (_productController.text.trim().isEmpty) {
           _showMessage('Tell us the product name.');
@@ -131,7 +213,11 @@ class _NewCaseScreenState extends State<NewCaseScreen> {
       }
       final store = _customStore
           ? _customStoreController.text.trim()
-          : _selectedStore!;
+          : (_selectedStoreName ?? '');
+      if (store.isEmpty) {
+        _showMessage('Select a store to continue.');
+        return;
+      }
       final product = _productController.text.trim();
       final description = _descriptionController.text.trim();
 
@@ -275,19 +361,35 @@ class _NewCaseScreenState extends State<NewCaseScreen> {
       case 0:
         return _StoreStep(
           stores: _storeBrands,
-          selectedStore: _selectedStore,
+          selectedStoreId: _selectedStoreId,
           customStore: _customStore,
           customStoreController: _customStoreController,
           onStoreChanged: (value) {
             setState(() {
               if (value == '_custom_') {
-                _selectedStore = null;
+                _selectedStoreId = null;
+                _selectedStoreName = null;
                 _customStore = true;
               } else {
-                _selectedStore = value;
+                final matches = _storeBrands
+                    .where((store) => store.storeId == value)
+                    .toList();
+                if (matches.isEmpty) {
+                  _selectedStoreId = null;
+                  _selectedStoreName = null;
+                } else {
+                  _selectedStoreId = value;
+                  _selectedStoreName = matches.first.name;
+                }
                 _customStore = false;
+                _customStoreController.clear();
               }
             });
+          },
+          isLoading: _storesLoading,
+          error: _storesError,
+          onRetry: () {
+            _loadStores();
           },
         );
       case 1:
@@ -323,26 +425,33 @@ class _NewCaseScreenState extends State<NewCaseScreen> {
 class _StoreStep extends StatelessWidget {
   const _StoreStep({
     required this.stores,
-    required this.selectedStore,
+    required this.selectedStoreId,
     required this.customStore,
     required this.customStoreController,
     required this.onStoreChanged,
+    required this.isLoading,
+    required this.onRetry,
+    this.error,
   });
 
   final List<_StoreBrand> stores;
-  final String? selectedStore;
+  final String? selectedStoreId;
   final bool customStore;
   final TextEditingController customStoreController;
   final ValueChanged<String> onStoreChanged;
+  final bool isLoading;
+  final String? error;
+  final VoidCallback onRetry;
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           'Where did you buy it?',
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+          style: theme.textTheme.titleLarge?.copyWith(
             fontWeight: FontWeight.w700,
             color: AppColors.textPrimary,
           ),
@@ -350,11 +459,69 @@ class _StoreStep extends StatelessWidget {
         const SizedBox(height: 12),
         Text(
           'Choose the store so we can route your claim to the right team.',
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+          style: theme.textTheme.bodyMedium?.copyWith(
             color: fadeColor(AppColors.textPrimary, 0.7),
           ),
         ),
         const SizedBox(height: 24),
+        if (isLoading && stores.isEmpty)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 16),
+            child: Center(
+              child: CircularProgressIndicator(),
+            ),
+          ),
+        if (!isLoading && error == null && stores.isEmpty) ...[
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: fadeColor(AppColors.info, 0.12),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              'No stores are configured yet. You can still continue with "Other store".',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: fadeColor(AppColors.textPrimary, 0.8),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+        ],
+        if (error != null) ...[
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: fadeColor(AppColors.danger, 0.12),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'We couldn\'t refresh the store list. You can retry or choose another store manually.',
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: OutlinedButton(
+                    onPressed: onRetry,
+                    child: const Text('Retry'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+        ],
+        if (isLoading && stores.isNotEmpty) ...[
+          const LinearProgressIndicator(minHeight: 2),
+          const SizedBox(height: 16),
+        ],
         LayoutBuilder(
           builder: (context, constraints) {
             final bool isNarrow = constraints.maxWidth < 520;
@@ -362,8 +529,8 @@ class _StoreStep extends StatelessWidget {
               for (final store in stores)
                 _StoreSelectionButton(
                   brand: store,
-                  isSelected: selectedStore == store.name,
-                  onTap: () => onStoreChanged(store.name),
+                  isSelected: selectedStoreId == store.storeId,
+                  onTap: () => onStoreChanged(store.storeId),
                   expand: isNarrow,
                 ),
               _OtherStoreButton(
@@ -409,14 +576,24 @@ class _StoreStep extends StatelessWidget {
 
 class _StoreBrand {
   const _StoreBrand({
+    required this.storeId,
     required this.name,
     required this.primaryColor,
-    required this.icon,
+    required this.email,
   });
 
+  final String storeId;
   final String name;
   final Color primaryColor;
-  final IconData icon;
+  final String email;
+
+  String get initials {
+    final trimmed = name.trim();
+    if (trimmed.isEmpty) {
+      return '?';
+    }
+    return trimmed.substring(0, 1).toUpperCase();
+  }
 }
 
 class _StoreSelectionButton extends StatelessWidget {
@@ -434,9 +611,27 @@ class _StoreSelectionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
     final Color accent = brand.primaryColor;
     final Color background = isSelected ? accent : fadeColor(accent, 0.12);
     final Color foreground = isSelected ? Colors.white : accent;
+    final TextStyle avatarTextStyle = (textTheme.labelLarge ??
+            const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+            ))
+        .copyWith(
+      color: foreground,
+      fontWeight: FontWeight.w700,
+    );
+    final TextStyle nameStyle = (textTheme.bodyMedium ??
+            const TextStyle(
+              fontSize: 16,
+            ))
+        .copyWith(
+      color: foreground,
+      fontWeight: FontWeight.w600,
+    );
 
     Widget button = Ink(
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
@@ -461,27 +656,24 @@ class _StoreSelectionButton extends StatelessWidget {
             backgroundColor: isSelected
                 ? fadeColor(Colors.white, 0.18)
                 : Colors.white,
-            child: Icon(brand.icon, color: foreground, size: 20),
+            child: Text(
+              brand.initials,
+              style: avatarTextStyle,
+            ),
           ),
           const SizedBox(width: 12),
           if (expand)
             Expanded(
               child: Text(
                 brand.name,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: foreground,
-                  fontWeight: FontWeight.w600,
-                ),
+                style: nameStyle,
                 overflow: TextOverflow.ellipsis,
               ),
             )
           else
             Text(
               brand.name,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: foreground,
-                fontWeight: FontWeight.w600,
-              ),
+              style: nameStyle,
             ),
           if (isSelected) ...[
             const SizedBox(width: 12),

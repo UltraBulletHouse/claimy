@@ -65,6 +65,7 @@ class _NewCaseScreenState extends State<NewCaseScreen> {
               storeId: entry.storeId,
               name: entry.name,
               primaryColor: _parseColor(entry.primaryColor),
+              secondaryColor: _parseColor(entry.secondaryColor),
               email: entry.email,
             ),
           )
@@ -518,12 +519,14 @@ class _StoreBrand {
     required this.storeId,
     required this.name,
     required this.primaryColor,
+    required this.secondaryColor,
     required this.email,
   });
 
   final String storeId;
   final String name;
   final Color primaryColor;
+  final Color secondaryColor;
   final String email;
 
   String get initials {
@@ -551,8 +554,17 @@ class _StoreSelectionButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
-    final Color baseColor = brand.primaryColor;
-    final Color background = baseColor;
+    final Color primary = brand.primaryColor;
+    final Color secondary = brand.secondaryColor;
+    final bool hasGradient = primary.value != secondary.value;
+    final Gradient? gradient = hasGradient
+        ? LinearGradient(
+            colors: [primary, secondary],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          )
+        : null;
+    final Color background = hasGradient ? Colors.transparent : primary;
     final Color foreground = Colors.black87;
     final Color borderColor = isSelected ? Colors.black87 : fadeColor(Colors.black, 0.1);
     final TextStyle avatarTextStyle = (textTheme.labelLarge ??
@@ -577,11 +589,12 @@ class _StoreSelectionButton extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
       decoration: BoxDecoration(
         color: background,
+        gradient: gradient,
         borderRadius: BorderRadius.circular(24),
         border: Border.all(color: borderColor, width: 2),
         boxShadow: [
           BoxShadow(
-            color: fadeColor(baseColor, isSelected ? 0.35 : 0.18),
+            color: fadeColor(hasGradient ? secondary : primary, isSelected ? 0.35 : 0.18),
             blurRadius: isSelected ? 14 : 8,
             offset: const Offset(0, 6),
           ),

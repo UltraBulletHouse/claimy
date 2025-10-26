@@ -71,6 +71,7 @@ class ComplaintsApi {
             final storeId = item['storeId']?.toString();
             final name = item['name']?.toString();
             final primaryColor = item['primaryColor']?.toString();
+            final secondaryColorRaw = item['secondaryColor']?.toString();
             final email = item['email']?.toString();
             if (storeId != null &&
                 name != null &&
@@ -80,11 +81,15 @@ class ComplaintsApi {
                 name.isNotEmpty &&
                 primaryColor.isNotEmpty &&
                 email.isNotEmpty) {
+              final secondaryColor = (secondaryColorRaw != null && secondaryColorRaw.isNotEmpty)
+                  ? secondaryColorRaw
+                  : primaryColor;
               stores.add(
                 StoreCatalogEntry(
                   storeId: storeId,
                   name: name,
                   primaryColor: primaryColor,
+                  secondaryColor: secondaryColor,
                   email: email,
                 ),
               );
@@ -201,12 +206,14 @@ class StoreCatalogEntry {
     required this.storeId,
     required this.name,
     required this.primaryColor,
+    required this.secondaryColor,
     required this.email,
   });
 
   final String storeId;
   final String name;
   final String primaryColor;
+  final String secondaryColor;
   final String email;
 }
 

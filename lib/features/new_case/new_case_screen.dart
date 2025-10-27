@@ -574,9 +574,9 @@ class _StoreSelectionButton extends StatelessWidget {
     Widget button = AnimatedContainer(
       duration: const Duration(milliseconds: 200),
       curve: Curves.easeOut,
-      padding: EdgeInsets.symmetric(
+      padding: const EdgeInsets.symmetric(
         horizontal: 24,
-        vertical: isSelected ? 18 : 14,
+        vertical: 18,
       ),
       decoration: BoxDecoration(
         color: background,
@@ -594,7 +594,7 @@ class _StoreSelectionButton extends StatelessWidget {
         alignment: Alignment.center,
         children: [
           Padding(
-            padding: EdgeInsets.only(right: isSelected ? 36 : 0),
+            padding: EdgeInsets.symmetric(horizontal: isSelected ? 36 : 0),
             child: Text(
               brand.name,
               style: nameStyle,

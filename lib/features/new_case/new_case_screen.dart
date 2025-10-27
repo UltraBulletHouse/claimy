@@ -556,31 +556,16 @@ class _StoreSelectionButton extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
     final Color primary = brand.primaryColor;
     final Color secondary = brand.secondaryColor;
-    final bool hasGradient = primary.value != secondary.value;
-    final Gradient? gradient = hasGradient
-        ? LinearGradient(
-            colors: [primary, secondary],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          )
-        : null;
-    final Color background = hasGradient ? Colors.transparent : primary;
-    final Color foreground = Colors.black87;
-    final Color borderColor = isSelected ? Colors.black87 : fadeColor(Colors.black, 0.1);
-    final TextStyle avatarTextStyle = (textTheme.labelLarge ??
-            const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-            ))
-        .copyWith(
-      color: foreground,
-      fontWeight: FontWeight.w700,
-    );
+    final Color background = primary;
+    final Color foreground = secondary;
+    final Color borderColor =
+        isSelected ? secondary : fadeColor(secondary, 0.4);
     final TextStyle nameStyle = (textTheme.bodyMedium ??
             const TextStyle(
-              fontSize: 16,
+              fontSize: 18,
             ))
         .copyWith(
+      fontSize: 18,
       color: foreground,
       fontWeight: FontWeight.w600,
     );
@@ -589,47 +574,24 @@ class _StoreSelectionButton extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
       decoration: BoxDecoration(
         color: background,
-        gradient: gradient,
         borderRadius: BorderRadius.circular(24),
         border: Border.all(color: borderColor, width: 2),
         boxShadow: [
           BoxShadow(
-            color: fadeColor(hasGradient ? secondary : primary, isSelected ? 0.35 : 0.18),
+            color: fadeColor(primary, isSelected ? 0.35 : 0.18),
             blurRadius: isSelected ? 14 : 8,
             offset: const Offset(0, 6),
           ),
         ],
       ),
-      child: Row(
-        mainAxisSize: expand ? MainAxisSize.max : MainAxisSize.min,
-        children: [
-          CircleAvatar(
-            radius: 18,
-            backgroundColor: Colors.white.withOpacity(0.75),
-            child: Text(
-              brand.initials,
-              style: avatarTextStyle,
-            ),
-          ),
-          const SizedBox(width: 12),
-          if (expand)
-            Expanded(
-              child: Text(
-                brand.name,
-                style: nameStyle,
-                overflow: TextOverflow.ellipsis,
-              ),
-            )
-          else
-            Text(
-              brand.name,
-              style: nameStyle,
-            ),
-          if (isSelected) ...[
-            const SizedBox(width: 12),
-            const Icon(Icons.check_circle, color: Colors.black87, size: 18),
-          ],
-        ],
+      child: Center(
+        child: Text(
+          brand.name,
+          style: nameStyle,
+          textAlign: TextAlign.center,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
       ),
     );
 

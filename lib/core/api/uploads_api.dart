@@ -1,7 +1,10 @@
+import 'dart:io' show Platform;
 import 'dart:convert';
-import 'package:http/http.dart' as http;
 import 'dart:typed_data';
+
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart' show kDebugMode;
+import 'package:http/http.dart' as http;
 
 class UploadsApi {
   UploadsApi({String? baseUrl}) : _baseUrl = baseUrl ?? _detectBaseUrl();
@@ -9,13 +12,25 @@ class UploadsApi {
   final String _baseUrl;
 
   static String _detectBaseUrl() {
-    const local = 'http://localhost:3000';
-    // Android emulator cannot reach localhost on host machine
+    const env = String.fromEnvironment('CLAIMY_API_BASE');
+    if (env.isNotEmpty) return env;
+
+    if (kDebugMode) {
+      if (_isAndroid) return 'http://10.0.2.2:3000';
+      return 'http://localhost:3000';
+    }
+
+    return _productionBaseUrl;
+  }
+
+  static const String _productionBaseUrl = 'https://claimy-backend.vercel.app';
+
+  static bool get _isAndroid {
     try {
-      // ignore: deprecated_member_use
-      if (const bool.hasEnvironment('dart.library.io')) {}
-    } catch (_) {}
-    return const String.fromEnvironment('CLAIMY_API_BASE', defaultValue: local);
+      return Platform.isAndroid;
+    } catch (_) {
+      return false;
+    }
   }
 
   Uri _url(String path) => Uri.parse('$_baseUrl$path');

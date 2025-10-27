@@ -1,7 +1,9 @@
 import 'dart:convert';
 import 'dart:io' show Platform;
-import 'package:http/http.dart' as http;
+
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart' show kDebugMode;
+import 'package:http/http.dart' as http;
 
 class ComplaintsApi {
   ComplaintsApi({String? baseUrl}) : _baseUrl = baseUrl ?? _detectBaseUrl();
@@ -112,12 +114,19 @@ class ComplaintsApi {
   }
 
   static String _detectBaseUrl() {
-    // Default dev backend
-    const local = 'http://localhost:3000';
-    // Android emulator cannot reach localhost on host machine
-    if (_isAndroid) return 'http://10.0.2.2:3000';
-    return const String.fromEnvironment('CLAIMY_API_BASE', defaultValue: local);
+    const env = String.fromEnvironment('CLAIMY_API_BASE');
+    if (env.isNotEmpty) return env;
+
+    // In debug/dev builds prefer local backend for easier development.
+    if (kDebugMode) {
+      if (_isAndroid) return 'http://10.0.2.2:3000';
+      return 'http://localhost:3000';
+    }
+
+    return _productionBaseUrl;
   }
+
+  static const String _productionBaseUrl = 'https://claimy-backend.vercel.app';
 
   static bool get _isAndroid {
     try {

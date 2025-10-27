@@ -560,38 +560,59 @@ class _StoreSelectionButton extends StatelessWidget {
     final Color foreground = secondary;
     final Color borderColor =
         isSelected ? secondary : fadeColor(secondary, 0.4);
+    final double fontSize = isSelected ? 20 : 18;
     final TextStyle nameStyle = (textTheme.bodyMedium ??
-            const TextStyle(
-              fontSize: 18,
+            TextStyle(
+              fontSize: fontSize,
             ))
         .copyWith(
-      fontSize: 18,
+      fontSize: fontSize,
       color: foreground,
-      fontWeight: FontWeight.w600,
+      fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
     );
 
-    Widget button = Ink(
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+    Widget button = AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
+      curve: Curves.easeOut,
+      padding: EdgeInsets.symmetric(
+        horizontal: 24,
+        vertical: isSelected ? 18 : 14,
+      ),
       decoration: BoxDecoration(
         color: background,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: borderColor, width: 2),
+        border: Border.all(color: borderColor, width: isSelected ? 3 : 2),
         boxShadow: [
           BoxShadow(
-            color: fadeColor(primary, isSelected ? 0.35 : 0.18),
-            blurRadius: isSelected ? 14 : 8,
+            color: fadeColor(primary, isSelected ? 0.45 : 0.18),
+            blurRadius: isSelected ? 18 : 8,
             offset: const Offset(0, 6),
           ),
         ],
       ),
-      child: Center(
-        child: Text(
-          brand.name,
-          style: nameStyle,
-          textAlign: TextAlign.center,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-        ),
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Padding(
+            padding: EdgeInsets.only(right: isSelected ? 36 : 0),
+            child: Text(
+              brand.name,
+              style: nameStyle,
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          if (isSelected)
+            Align(
+              alignment: Alignment.centerRight,
+              child: Icon(
+                Icons.check_circle,
+                color: foreground,
+                size: 22,
+              ),
+            ),
+        ],
       ),
     );
 

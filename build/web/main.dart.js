@@ -42659,7 +42659,7 @@ return A.K(l.a.ho(!0),$async$ru)
 case 3:k=a0
 f=t.N
 s=4
-return A.K(A.aIZ(A.f_(p.a+("/api/cases?limit="+a+"&offset="+b+"&sort="+A.Ic(1,"-createdAt",B.a6,!0)),0,null),A.au(["Accept","application/json","Authorization","Bearer "+A.j(k)],f,f)),$async$ru)
+return A.K(A.aIZ(A.f_(p.a+"/api/public"+("/cases?limit="+a+"&offset="+b+"&sort="+A.Ic(1,"-createdAt",B.a6,!0)),0,null),A.au(["Accept","application/json","Authorization","Bearer "+A.j(k)],f,f)),$async$ru)
 case 4:o=a0
 if(o.b>=200&&o.b<300){f=o
 j=t.a
@@ -42694,7 +42694,7 @@ return A.K(l.a.ho(!0),$async$rC)
 case 3:k=a6
 a2=t.N
 s=4
-return A.K(A.aIZ(A.f_(p.a+"/api/stores",0,null),A.au(["Accept","application/json","Authorization","Bearer "+A.j(k)],a2,a2)),$async$rC)
+return A.K(A.aIZ(A.f_(p.a+"/api/public/stores",0,null),A.au(["Accept","application/json","Authorization","Bearer "+A.j(k)],a2,a2)),$async$rC)
 case 4:o=a6
 if(o.b>=200&&o.b<300){a2=o
 j=t.a
@@ -42738,7 +42738,7 @@ if(g==null)throw A.f(A.Dw("Not authenticated",401))
 s=3
 return A.K(g.a.ho(!0),$async$rS)
 case 3:f=a5
-i=A.f_(p.a+"/api/cases",0,null)
+i=A.f_(p.a+"/api/public/cases",0,null)
 c=A.q(c,c)
 c.m(0,"Content-Type","application/json")
 if(f!=null)c.m(0,"Authorization","Bearer "+f)
@@ -42787,7 +42787,7 @@ if(o==null)throw A.f(A.ec("Not authenticated"))
 s=3
 return A.K(o.a.ho(!0),$async$rp)
 case 3:n=d
-m=A.aQf("POST",A.f_(p.a+"/api/uploads",0,null))
+m=A.aQf("POST",A.f_(p.a+"/api/public/uploads",0,null))
 m.r.m(0,"Authorization","Bearer "+A.j(n))
 if(a!=null)m.y.push(A.aEA("product",a,"product.jpg"))
 if(b!=null)m.y.push(A.aEA("receipt",b,"receipt.jpg"))

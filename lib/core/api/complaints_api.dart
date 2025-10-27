@@ -17,7 +17,7 @@ class ComplaintsApi {
     final idToken = await user.getIdToken(true);
 
     final resp = await http.get(
-      _url('/api/cases?limit=$limit&offset=$offset&sort=${Uri.encodeQueryComponent(sort)}'),
+      _url('/cases?limit=$limit&offset=$offset&sort=${Uri.encodeQueryComponent(sort)}'),
       headers: {
         'Accept': 'application/json',
         'Authorization': 'Bearer $idToken',
@@ -56,7 +56,7 @@ class ComplaintsApi {
     final idToken = await user.getIdToken(true);
 
     final resp = await http.get(
-      _url('/api/stores'),
+      _url('/stores'),
       headers: {
         'Accept': 'application/json',
         'Authorization': 'Bearer $idToken',
@@ -136,7 +136,7 @@ class ComplaintsApi {
     }
   }
 
-  Uri _url(String path) => Uri.parse('$_baseUrl$path');
+  Uri _url(String path) => Uri.parse('$_baseUrl/api/public$path');
 
   Future<SubmitResult> submitComplaint({
     required String store,
@@ -164,7 +164,7 @@ class ComplaintsApi {
     final idToken = await user.getIdToken(true);
 
     final resp = await http.post(
-      _url('/api/cases'),
+      _url('/cases'),
       headers: {
         'Content-Type': 'application/json',
         if (idToken != null) 'Authorization': 'Bearer $idToken',

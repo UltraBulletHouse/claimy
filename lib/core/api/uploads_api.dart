@@ -33,7 +33,7 @@ class UploadsApi {
     }
   }
 
-  Uri _url(String path) => Uri.parse('$_baseUrl$path');
+  Uri _url(String path) => Uri.parse('$_baseUrl/api/public$path');
 
   Future<UploadResult> uploadImages({Uint8List? productBytes, Uint8List? receiptBytes}) async {
     final user = FirebaseAuth.instance.currentUser;
@@ -42,7 +42,7 @@ class UploadsApi {
     }
     final idToken = await user.getIdToken(true);
 
-    final request = http.MultipartRequest('POST', _url('/api/uploads'));
+    final request = http.MultipartRequest('POST', _url('/uploads'));
     request.headers['Authorization'] = 'Bearer $idToken';
 
     if (productBytes != null) {

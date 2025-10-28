@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:math';
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -368,64 +367,4 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Local demo-only simulation; server-driven status updates should come from backend in the future
-  void simulateProgress(String id) {
-    final caseModel = caseById(id);
-    if (caseModel == null) return;
-    final now = DateTime.now();
-    CaseStatus nextStatus;
-    String message;
-    switch (caseModel.status) {
-      case CaseStatus.pending:
-        nextStatus = CaseStatus.inReview;
-        message = 'A specialist started reviewing your claim.';
-        break;
-      case CaseStatus.inReview:
-        nextStatus = CaseStatus.needsInfo;
-        message = 'We need the purchase date from your receipt.';
-        caseModel.pendingQuestion =
-            'Could you confirm the purchase date on your receipt?';
-        break;
-      case CaseStatus.needsInfo:
-        nextStatus = CaseStatus.approved;
-        message =
-            'Great news! Your claim was approved. A reward voucher is ready.';
-        caseModel.pendingQuestion = null;
-        _grantVoucherForCase(caseModel);
-        break;
-      case CaseStatus.approved:
-        nextStatus = CaseStatus.rejected;
-        message = 'The case was closed.';
-        break;
-      case CaseStatus.rejected:
-        nextStatus = CaseStatus.pending;
-        message = 'Case reopened for review.';
-        break;
-    }
-    caseModel.status = nextStatus;
-    caseModel.history.add(
-      CaseUpdate(
-        status: nextStatus,
-        message: message,
-        timestamp: now,
-        isCustomerAction: false,
-      ),
-    );
-    caseModel.hasUnreadUpdates = true;
-    notifyListeners();
-  }
-
-  void _grantVoucherForCase(CaseModel caseModel) {
-    final random = Random();
-    final code = 'THANKS${random.nextInt(9999).toString().padLeft(4, '0')}';
-    final voucher = Voucher(
-      id: 'voucher-${DateTime.now().millisecondsSinceEpoch}',
-      storeName: caseModel.storeName,
-      amountLabel: '15% off your next purchase',
-      code: code,
-      expiration: DateTime.now().add(const Duration(days: 60)),
-      used: false,
-    );
-    _vouchers.add(voucher);
-  }
 }

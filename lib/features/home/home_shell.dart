@@ -1185,29 +1185,12 @@ class _CaseDetailScreenState extends State<CaseDetailScreen> {
               onAnswer: _answerQuestion,
             ),
           const SizedBox(height: 16),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Status history',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.textPrimary,
-                ),
-              ),
-              TextButton.icon(
-                onPressed: () {
-                  context.read<AppState>().simulateProgress(widget.caseId);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Simulated an update. Check the timeline!'),
-                    ),
-                  );
-                },
-                icon: const Icon(Icons.auto_awesome_rounded),
-                label: const Text('Simulate update'),
-              ),
-            ],
+          Text(
+            'Status history',
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w700,
+              color: AppColors.textPrimary,
+            ),
           ),
           const SizedBox(height: 8),
           ...List.generate(caseModel.history.length, (index) {

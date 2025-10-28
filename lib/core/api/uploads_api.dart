@@ -3,7 +3,6 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:http/http.dart' as http;
 
 class UploadsApi {
@@ -15,12 +14,15 @@ class UploadsApi {
     const env = String.fromEnvironment('CLAIMY_API_BASE');
     if (env.isNotEmpty) return env;
 
-    if (kDebugMode) {
-      if (_isAndroid) return 'http://10.0.2.2:3000';
-      return 'http://localhost:3000';
-    }
+    const useLocal = bool.fromEnvironment('CLAIMY_USE_LOCAL_API');
+    if (useLocal) return _localBaseUrl();
 
     return _productionBaseUrl;
+  }
+
+  static String _localBaseUrl() {
+    if (_isAndroid) return 'http://10.0.2.2:3000';
+    return 'http://localhost:3000';
   }
 
   static const String _productionBaseUrl = 'https://claimy-backend.vercel.app';

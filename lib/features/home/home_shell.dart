@@ -570,12 +570,23 @@ class _CasesViewState extends State<CasesView> {
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: LayoutBuilder(
             builder: (context, constraints) {
-              const columns = 3;
+              // Make filter buttons responsive: increase columns on wider screens
+              // so individual buttons don't grow too large on web/desktop.
               const spacing = 10.0;
+              const maxTileWidth = 180.0; // desired max width per button
+              int columns = (constraints.maxWidth / maxTileWidth).floor();
+              columns = columns.clamp(2, 6).toInt(); // keep between 2 and 6 columns
+
               final double totalSpacing = spacing * (columns - 1);
               final double buttonWidth =
                   (constraints.maxWidth - totalSpacing) / columns;
+
+              // Consider compact layout when buttons get narrow
               final bool compact = buttonWidth < 120;
+
+              // Aim for a slim pill height especially on desktop
+              final double desiredHeight = compact ? 44 : 48;
+              final double aspectRatio = buttonWidth / desiredHeight;
 
               return GridView.builder(
                 shrinkWrap: true,
@@ -585,7 +596,7 @@ class _CasesViewState extends State<CasesView> {
                   crossAxisCount: columns,
                   crossAxisSpacing: spacing,
                   mainAxisSpacing: spacing,
-                  childAspectRatio: compact ? 2.35 : 2.6,
+                  childAspectRatio: aspectRatio,
                 ),
                 itemBuilder: (context, index) {
                   final config = filterConfigs[index];

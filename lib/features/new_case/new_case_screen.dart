@@ -17,7 +17,7 @@ class NewCaseScreen extends StatefulWidget {
 }
 
 class _NewCaseScreenState extends State<NewCaseScreen> {
-  static const int _stepsCount = 3;
+  static const int _stepsCount = 2;
   List<_StoreBrand> _storeBrands = const [];
 
   int _currentStep = 0;
@@ -157,17 +157,18 @@ class _NewCaseScreenState extends State<NewCaseScreen> {
     switch (_currentStep) {
       case 0:
         final hasSelection =
-            _selectedStoreId != null && (_selectedStoreName?.isNotEmpty ?? false);
+            _selectedStoreId != null &&
+            (_selectedStoreName?.isNotEmpty ?? false);
         if (!hasSelection) {
           _showMessage('Select a store to continue.');
           return false;
         }
-        return true;
-      case 1:
         if (_productController.text.trim().isEmpty) {
           _showMessage('Tell us the product name.');
           return false;
         }
+        return true;
+      case 1:
         if (!_productPhotoAdded || !_receiptPhotoAdded) {
           _showMessage('Please add both photos before continuing.');
           return false;
@@ -350,10 +351,12 @@ class _NewCaseScreenState extends State<NewCaseScreen> {
         return _StoreStep(
           stores: _storeBrands,
           selectedStoreId: _selectedStoreId,
+          productController: _productController,
           onStoreChanged: (value) {
             setState(() {
-              final matches =
-                  _storeBrands.where((store) => store.storeId == value).toList();
+              final matches = _storeBrands
+                  .where((store) => store.storeId == value)
+                  .toList();
               if (matches.isEmpty) {
                 _selectedStoreId = null;
                 _selectedStoreName = null;
@@ -370,8 +373,8 @@ class _NewCaseScreenState extends State<NewCaseScreen> {
           },
         );
       case 1:
-        return _ProductStep(
-          controller: _productController,
+        return _DetailsStep(
+          descriptionController: _descriptionController,
           productPhotoAdded: _productPhotoAdded,
           receiptPhotoAdded: _receiptPhotoAdded,
           productPreviewDataUrl: _productPreviewDataUrl,
@@ -391,8 +394,6 @@ class _NewCaseScreenState extends State<NewCaseScreen> {
             });
           },
         );
-      case 2:
-        return _NotesStep(controller: _descriptionController);
       default:
         return const SizedBox.shrink();
     }
@@ -403,6 +404,7 @@ class _StoreStep extends StatelessWidget {
   const _StoreStep({
     required this.stores,
     required this.selectedStoreId,
+    required this.productController,
     required this.onStoreChanged,
     required this.isLoading,
     required this.onRetry,
@@ -411,6 +413,7 @@ class _StoreStep extends StatelessWidget {
 
   final List<_StoreBrand> stores;
   final String? selectedStoreId;
+  final TextEditingController productController;
   final ValueChanged<String> onStoreChanged;
   final bool isLoading;
   final String? error;
@@ -440,9 +443,7 @@ class _StoreStep extends StatelessWidget {
         if (isLoading && stores.isEmpty)
           const Padding(
             padding: EdgeInsets.symmetric(vertical: 16),
-            child: Center(
-              child: CircularProgressIndicator(),
-            ),
+            child: Center(child: CircularProgressIndicator()),
           ),
         if (!isLoading && error == null && stores.isEmpty) ...[
           Container(
@@ -509,6 +510,32 @@ class _StoreStep extends StatelessWidget {
             ],
           ],
         ),
+        const SizedBox(height: 32),
+        Text(
+          'What did you buy?',
+          style: theme.textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.w700,
+            color: AppColors.textPrimary,
+          ),
+        ),
+        const SizedBox(height: 12),
+        Text(
+          'Be specific so the store can identify the product quickly.',
+          style: theme.textTheme.bodyMedium?.copyWith(
+            color: fadeColor(AppColors.textPrimary, 0.7),
+          ),
+        ),
+        const SizedBox(height: 24),
+        TextField(
+          controller: productController,
+          decoration: const InputDecoration(
+            labelText: 'Product name',
+            hintText: 'e.g. Organic almond milk 1L',
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.all(Radius.circular(16)),
+            ),
+          ),
+        ),
       ],
     );
   }
@@ -558,26 +585,21 @@ class _StoreSelectionButton extends StatelessWidget {
     final Color secondary = brand.secondaryColor;
     final Color background = primary;
     final Color foreground = secondary;
-    final Color borderColor =
-        isSelected ? secondary : fadeColor(secondary, 0.4);
+    final Color borderColor = isSelected
+        ? secondary
+        : fadeColor(secondary, 0.4);
     final double fontSize = isSelected ? 20 : 18;
-    final TextStyle nameStyle = (textTheme.bodyMedium ??
-            TextStyle(
-              fontSize: fontSize,
-            ))
-        .copyWith(
-      fontSize: fontSize,
-      color: foreground,
-      fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
-    );
+    final TextStyle nameStyle =
+        (textTheme.bodyMedium ?? TextStyle(fontSize: fontSize)).copyWith(
+          fontSize: fontSize,
+          color: foreground,
+          fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
+        );
 
     Widget button = AnimatedContainer(
       duration: const Duration(milliseconds: 200),
       curve: Curves.easeOut,
-      padding: const EdgeInsets.symmetric(
-        horizontal: 24,
-        vertical: 18,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
       decoration: BoxDecoration(
         color: background,
         borderRadius: BorderRadius.circular(24),
@@ -606,11 +628,7 @@ class _StoreSelectionButton extends StatelessWidget {
           if (isSelected)
             Align(
               alignment: Alignment.centerRight,
-              child: Icon(
-                Icons.check_circle,
-                color: foreground,
-                size: 22,
-              ),
+              child: Icon(Icons.check_circle, color: foreground, size: 22),
             ),
         ],
       ),
@@ -632,9 +650,9 @@ class _StoreSelectionButton extends StatelessWidget {
   }
 }
 
-class _ProductStep extends StatelessWidget {
-  const _ProductStep({
-    required this.controller,
+class _DetailsStep extends StatelessWidget {
+  const _DetailsStep({
+    required this.descriptionController,
     required this.productPhotoAdded,
     required this.receiptPhotoAdded,
     required this.onPickProduct,
@@ -643,7 +661,7 @@ class _ProductStep extends StatelessWidget {
     this.receiptPreviewDataUrl,
   });
 
-  final TextEditingController controller;
+  final TextEditingController descriptionController;
   final bool productPhotoAdded;
   final bool receiptPhotoAdded;
   final void Function(Uint8List? bytes, String? preview) onPickProduct;
@@ -657,7 +675,7 @@ class _ProductStep extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'What\'s the product?',
+          'Describe what happened',
           style: Theme.of(context).textTheme.titleLarge?.copyWith(
             fontWeight: FontWeight.w700,
             color: AppColors.textPrimary,
@@ -665,17 +683,19 @@ class _ProductStep extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         Text(
-          'Be specific so the store can identify it quickly.',
+          'Let us know what went wrong. Keep it short and friendly.',
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
             color: fadeColor(AppColors.textPrimary, 0.7),
           ),
         ),
         const SizedBox(height: 24),
         TextField(
-          controller: controller,
+          controller: descriptionController,
+          keyboardType: TextInputType.multiline,
+          maxLines: 5,
           decoration: const InputDecoration(
-            labelText: 'Product name',
-            hintText: 'e.g. Organic almond milk 1L',
+            labelText: 'Describe the issue (optional)',
+            hintText: 'Tell us what went wrong so we can fix it.',
             border: OutlineInputBorder(
               borderRadius: BorderRadius.all(Radius.circular(16)),
             ),
@@ -828,48 +848,6 @@ class _PhotoBox extends StatelessWidget {
           ],
         ),
       ),
-    );
-  }
-}
-
-class _NotesStep extends StatelessWidget {
-  const _NotesStep({required this.controller});
-
-  final TextEditingController controller;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Anything else?',
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-            fontWeight: FontWeight.w700,
-            color: AppColors.textPrimary,
-          ),
-        ),
-        const SizedBox(height: 12),
-        Text(
-          'Let us know what happened. Keep it short and friendly.',
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-            color: fadeColor(AppColors.textPrimary, 0.7),
-          ),
-        ),
-        const SizedBox(height: 24),
-        TextField(
-          controller: controller,
-          keyboardType: TextInputType.multiline,
-          maxLines: 5,
-          decoration: const InputDecoration(
-            labelText: 'Optional note',
-            hintText: 'Tell us what went wrong so we can fix it.',
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.all(Radius.circular(16)),
-            ),
-          ),
-        ),
-      ],
     );
   }
 }

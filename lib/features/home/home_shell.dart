@@ -1046,7 +1046,7 @@ class _CaseDetailScreenState extends State<CaseDetailScreen> {
   }
 
   void _answerQuestion(String response) {
-    context.read<AppState>().respondToAdditionalInfo(widget.caseId, response);
+    context.read<AppState>().respondToAdditionalInfoServer(widget.caseId, response: response);
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(SnackBar(content: Text('Thanks! We noted "$response".')));
@@ -1182,7 +1182,7 @@ class _CaseDetailScreenState extends State<CaseDetailScreen> {
           if (caseModel.requiresAdditionalInfo)
             AdditionalInfoCard(
               question: caseModel.pendingQuestion!,
-              onAnswer: _answerQuestion,
+              onAnswer: (response) => context.read<AppState>().respondToAdditionalInfoServer(caseModel.id, response: response),
             ),
           const SizedBox(height: 16),
           Text(

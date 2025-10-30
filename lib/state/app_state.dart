@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -241,21 +242,16 @@ class AppState extends ChangeNotifier {
     return 'there';
   }
 
-  void respondToAdditionalInfo(String id, String response) {
+  Future<void> respondToAdditionalInfoServer(String id,
+      {required String response, Uint8List? attachment}) async {
     final caseModel = caseById(id);
     if (caseModel == null) return;
-    caseModel.pendingQuestion = null;
-    caseModel.status = CaseStatus.inReview;
-    caseModel.history.add(
-      CaseUpdate(
-        status: CaseStatus.inReview,
-        message: 'You responded: $response',
-        timestamp: DateTime.now(),
-        isCustomerAction: true,
-      ),
-    );
-    caseModel.hasUnreadUpdates = false;
-    notifyListeners();
+    try {
+      await _api.submitInfoResponse(caseId: id, answer: response, attachmentBytes: attachment);
+      await refreshCasesFromServer();
+    } catch (_) {
+      // optionally show error
+    }
   }
 
   Future<void> refreshCasesFromServer() async {
@@ -277,6 +273,10 @@ class AppState extends ChangeNotifier {
         : DateTime.now();
     final statusStr = (m['status'] ?? 'PENDING').toString().toUpperCase();
     final status = _statusFromServer(statusStr);
+    final infoReq = (m['infoRequest'] is Map) ? (m['infoRequest'] as Map) : null;
+    final pendingQuestionServer = (status == CaseStatus.needsInfo)
+        ? (infoReq?['message']?.toString() ?? '')
+        : '';
 
     final productImageUrl = (m['productImageUrl'] ?? m['product_image_url'])
         ?.toString();
@@ -333,12 +333,13 @@ class AppState extends ChangeNotifier {
           ? productImageUrl
           : (images.isNotEmpty ? images.first?.toString() : null),
       receiptImageUrl:
-          ((m['receiptImageUrl'] ?? m['receipt_image_url'])
-                  ?.toString()
-                  .isNotEmpty ??
-              false)
-          ? (m['receiptImageUrl'] ?? m['receipt_image_url']).toString()
-          : (images.length > 1 ? images[1]?.toString() : null),
+         ((m['receiptImageUrl'] ?? m['receipt_image_url'])
+                 ?.toString()
+                 .isNotEmpty ??
+             false)
+         ? (m['receiptImageUrl'] ?? m['receipt_image_url']).toString()
+         : (images.length > 1 ? images[1]?.toString() : null),
+     pendingQuestion: pendingQuestionServer.isNotEmpty ? pendingQuestionServer : null,
     );
   }
 

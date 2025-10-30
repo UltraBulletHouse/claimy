@@ -282,15 +282,17 @@ class _HomeHeader extends StatelessWidget {
                       color: fadeColor(AppColors.textPrimary, 0.7),
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    showRewards ? 'Rewards hub' : 'Claim overview',
-                    style: textTheme.headlineSmall?.copyWith(
-                      color: AppColors.textPrimary,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: -0.3,
+                  if (showRewards) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      'Rewards hub',
+                      style: textTheme.headlineSmall?.copyWith(
+                        color: AppColors.textPrimary,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: -0.3,
+                      ),
                     ),
-                  ),
+                  ],
                 ],
               ),
             ),

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -241,21 +242,16 @@ class AppState extends ChangeNotifier {
     return 'there';
   }
 
-  void respondToAdditionalInfo(String id, String response) {
+  Future<void> respondToAdditionalInfoServer(String id,
+      {required String response, Uint8List? attachment}) async {
     final caseModel = caseById(id);
     if (caseModel == null) return;
-    caseModel.pendingQuestion = null;
-    caseModel.status = CaseStatus.inReview;
-    caseModel.history.add(
-      CaseUpdate(
-        status: CaseStatus.inReview,
-        message: 'You responded: $response',
-        timestamp: DateTime.now(),
-        isCustomerAction: true,
-      ),
-    );
-    caseModel.hasUnreadUpdates = false;
-    notifyListeners();
+    try {
+      await _api.submitInfoResponse(caseId: id, answer: response, attachmentBytes: attachment);
+      await refreshCasesFromServer();
+    } catch (_) {
+      // optionally show error
+    }
   }
 
   Future<void> refreshCasesFromServer() async {
@@ -277,10 +273,53 @@ class AppState extends ChangeNotifier {
         : DateTime.now();
     final statusStr = (m['status'] ?? 'PENDING').toString().toUpperCase();
     final status = _statusFromServer(statusStr);
+    final infoReq = (m['infoRequest'] is Map) ? (m['infoRequest'] as Map) : null;
+    final pendingQuestionServer = (status == CaseStatus.needsInfo)
+        ? (infoReq?['message']?.toString() ?? '')
+        : '';
 
     final productImageUrl = (m['productImageUrl'] ?? m['product_image_url'])
         ?.toString();
     final images = (m['images'] as List?)?.cast<dynamic>() ?? const [];
+
+    // Map backend statusHistory into our CaseUpdate timeline
+    final List<dynamic> rawHistory =
+        (m['statusHistory'] is List) ? (m['statusHistory'] as List) : const [];
+
+    List<CaseUpdate> timeline = rawHistory
+        .whereType<Map>()
+        .map((entry) {
+          final statusRaw = (entry['status'] ?? '').toString().toUpperCase();
+          final s = _statusFromServer(statusRaw);
+          final note = (entry['note'] ?? '').toString();
+          final atStr = (entry['at'] ?? entry['timestamp'] ?? '').toString();
+          final at = atStr.isNotEmpty
+              ? (DateTime.tryParse(atStr) ?? createdAt)
+              : createdAt;
+          final msg = _statusMessageForTimeline(s, note);
+          return CaseUpdate(
+            status: s,
+            message: msg,
+            timestamp: at,
+            isCustomerAction: false,
+          );
+        })
+        .toList()
+      ..sort((a, b) => a.timestamp.compareTo(b.timestamp));
+
+    // Ensure there's an initial submitted entry at createdAt
+    final hasSubmitted = timeline.any((e) => e.status == CaseStatus.pending);
+    if (!hasSubmitted) {
+      timeline.insert(
+        0,
+        CaseUpdate(
+          status: CaseStatus.pending,
+          message: 'Submitted',
+          timestamp: createdAt,
+          isCustomerAction: true,
+        ),
+      );
+    }
 
     return CaseModel(
       id: (m['id'] ?? m['_id'] ?? '').toString(),
@@ -288,26 +327,36 @@ class AppState extends ChangeNotifier {
       productName: (m['product'] ?? '').toString(),
       createdAt: createdAt,
       status: status,
-      history: [
-        CaseUpdate(
-          status: status,
-          message: 'Submitted',
-          timestamp: createdAt,
-          isCustomerAction: true,
-        ),
-      ],
+      history: timeline,
       hasUnreadUpdates: false,
       productImageUrl: productImageUrl?.isNotEmpty == true
           ? productImageUrl
           : (images.isNotEmpty ? images.first?.toString() : null),
       receiptImageUrl:
-          ((m['receiptImageUrl'] ?? m['receipt_image_url'])
-                  ?.toString()
-                  .isNotEmpty ??
-              false)
-          ? (m['receiptImageUrl'] ?? m['receipt_image_url']).toString()
-          : (images.length > 1 ? images[1]?.toString() : null),
+         ((m['receiptImageUrl'] ?? m['receipt_image_url'])
+                 ?.toString()
+                 .isNotEmpty ??
+             false)
+         ? (m['receiptImageUrl'] ?? m['receipt_image_url']).toString()
+         : (images.length > 1 ? images[1]?.toString() : null),
+     pendingQuestion: pendingQuestionServer.isNotEmpty ? pendingQuestionServer : null,
     );
+  }
+
+  String _statusMessageForTimeline(CaseStatus status, String note) {
+    final hasNote = note.trim().isNotEmpty;
+    switch (status) {
+      case CaseStatus.pending:
+        return 'Submitted';
+      case CaseStatus.inReview:
+        return hasNote ? note : 'We\'re reviewing your claim';
+      case CaseStatus.needsInfo:
+        return hasNote ? note : 'We\'ve requested additional info';
+      case CaseStatus.approved:
+        return hasNote ? note : 'Approved';
+      case CaseStatus.rejected:
+        return hasNote ? note : 'Declined';
+    }
   }
 
   CaseStatus _statusFromServer(String value) {

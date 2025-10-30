@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io' show Platform;
+import 'dart:typed_data';
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:http/http.dart' as http;
@@ -138,6 +139,47 @@ class ComplaintsApi {
   }
 
   Uri _url(String path) => Uri.parse('$_baseUrl/api/public$path');
+
+  Future<void> submitInfoResponse({
+    required String caseId,
+    String? answer,
+    Uint8List? attachmentBytes,
+  }) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      throw SubmitException('Not authenticated', statusCode: 401);
+    }
+    final idToken = await user.getIdToken(true);
+    final url = _url('/cases/$caseId/info-response');
+
+    if (attachmentBytes != null) {
+      final request = http.MultipartRequest('POST', url);
+      request.headers['Authorization'] = 'Bearer $idToken';
+      if (answer != null && answer.trim().isNotEmpty) {
+        request.fields['answer'] = answer.trim();
+      }
+      request.files.add(
+        http.MultipartFile.fromBytes('attachment', attachmentBytes, filename: 'attachment.jpg'),
+      );
+      final streamed = await request.send();
+      final resp = await http.Response.fromStream(streamed);
+      if (resp.statusCode < 200 || resp.statusCode >= 300) {
+        throw SubmitException('Request failed (${resp.statusCode})', statusCode: resp.statusCode);
+      }
+    } else {
+      final resp = await http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $idToken',
+        },
+        body: jsonEncode({'answer': answer ?? ''}),
+      );
+      if (resp.statusCode < 200 || resp.statusCode >= 300) {
+        throw SubmitException('Request failed (${resp.statusCode})', statusCode: resp.statusCode);
+      }
+    }
+  }
 
   Future<SubmitResult> submitComplaint({
     required String store,

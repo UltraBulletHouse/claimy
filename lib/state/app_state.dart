@@ -282,20 +282,52 @@ class AppState extends ChangeNotifier {
         ?.toString();
     final images = (m['images'] as List?)?.cast<dynamic>() ?? const [];
 
+    // Map backend statusHistory into our CaseUpdate timeline
+    final List<dynamic> rawHistory =
+        (m['statusHistory'] is List) ? (m['statusHistory'] as List) : const [];
+
+    List<CaseUpdate> timeline = rawHistory
+        .whereType<Map>()
+        .map((entry) {
+          final statusRaw = (entry['status'] ?? '').toString().toUpperCase();
+          final s = _statusFromServer(statusRaw);
+          final note = (entry['note'] ?? '').toString();
+          final atStr = (entry['at'] ?? entry['timestamp'] ?? '').toString();
+          final at = atStr.isNotEmpty
+              ? (DateTime.tryParse(atStr) ?? createdAt)
+              : createdAt;
+          final msg = _statusMessageForTimeline(s, note);
+          return CaseUpdate(
+            status: s,
+            message: msg,
+            timestamp: at,
+            isCustomerAction: false,
+          );
+        })
+        .toList()
+      ..sort((a, b) => a.timestamp.compareTo(b.timestamp));
+
+    // Ensure there's an initial submitted entry at createdAt
+    final hasSubmitted = timeline.any((e) => e.status == CaseStatus.pending);
+    if (!hasSubmitted) {
+      timeline.insert(
+        0,
+        CaseUpdate(
+          status: CaseStatus.pending,
+          message: 'Submitted',
+          timestamp: createdAt,
+          isCustomerAction: true,
+        ),
+      );
+    }
+
     return CaseModel(
       id: (m['id'] ?? m['_id'] ?? '').toString(),
       storeName: (m['store'] ?? '').toString(),
       productName: (m['product'] ?? '').toString(),
       createdAt: createdAt,
       status: status,
-      history: [
-        CaseUpdate(
-          status: status,
-          message: 'Submitted',
-          timestamp: createdAt,
-          isCustomerAction: true,
-        ),
-      ],
+      history: timeline,
       hasUnreadUpdates: false,
       productImageUrl: productImageUrl?.isNotEmpty == true
           ? productImageUrl
@@ -308,6 +340,22 @@ class AppState extends ChangeNotifier {
           ? (m['receiptImageUrl'] ?? m['receipt_image_url']).toString()
           : (images.length > 1 ? images[1]?.toString() : null),
     );
+  }
+
+  String _statusMessageForTimeline(CaseStatus status, String note) {
+    final hasNote = note.trim().isNotEmpty;
+    switch (status) {
+      case CaseStatus.pending:
+        return 'Submitted';
+      case CaseStatus.inReview:
+        return hasNote ? note : 'We\'re reviewing your claim';
+      case CaseStatus.needsInfo:
+        return hasNote ? note : 'We\'ve requested additional info';
+      case CaseStatus.approved:
+        return hasNote ? note : 'Approved';
+      case CaseStatus.rejected:
+        return hasNote ? note : 'Declined';
+    }
   }
 
   CaseStatus _statusFromServer(String value) {

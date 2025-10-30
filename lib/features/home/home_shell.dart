@@ -570,45 +570,38 @@ class _CasesViewState extends State<CasesView> {
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: LayoutBuilder(
             builder: (context, constraints) {
-              // Make filter buttons responsive: increase columns on wider screens
-              // so individual buttons don't grow too large on web/desktop.
+              // Keep the filter pills tight while still spreading across the row.
               const spacing = 10.0;
-              const maxTileWidth = 180.0; // desired max width per button
-              int columns = (constraints.maxWidth / maxTileWidth).floor();
-              columns = columns.clamp(2, 6).toInt(); // keep between 2 and 6 columns
+              const maxTileWidth = 160.0;
+              int columns = (constraints.maxWidth / maxTileWidth).ceil();
+              if (columns < 1) {
+                columns = 1;
+              } else if (columns > 6) {
+                columns = 6;
+              }
 
               final double totalSpacing = spacing * (columns - 1);
               final double buttonWidth =
                   (constraints.maxWidth - totalSpacing) / columns;
 
-              // Consider compact layout when buttons get narrow
-              final bool compact = buttonWidth < 120;
+              final bool compact = buttonWidth <= 120;
 
-              // Aim for a slim pill height especially on desktop
-              final double desiredHeight = compact ? 44 : 48;
-              final double aspectRatio = buttonWidth / desiredHeight;
-
-              return GridView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: filterConfigs.length,
-                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: columns,
-                  crossAxisSpacing: spacing,
-                  mainAxisSpacing: spacing,
-                  childAspectRatio: aspectRatio,
-                ),
-                itemBuilder: (context, index) {
-                  final config = filterConfigs[index];
-                  return _CaseFilterButton(
-                    label: config.label,
-                    icon: config.icon,
-                    accent: config.accent,
-                    selected: config.selected,
-                    onTap: config.onTap,
-                    compact: compact,
+              return Wrap(
+                spacing: spacing,
+                runSpacing: compact ? 6 : 8,
+                children: filterConfigs.map((config) {
+                  return SizedBox(
+                    width: buttonWidth,
+                    child: _CaseFilterButton(
+                      label: config.label,
+                      icon: config.icon,
+                      accent: config.accent,
+                      selected: config.selected,
+                      onTap: config.onTap,
+                      compact: compact,
+                    ),
                   );
-                },
+                }).toList(),
               );
             },
           ),
@@ -661,10 +654,7 @@ class _CaseFilterButton extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
     final Gradient? gradient = selected
         ? LinearGradient(
-            colors: [
-              accent,
-              Color.lerp(accent, Colors.white, 0.25)!,
-            ],
+            colors: [accent, Color.lerp(accent, Colors.white, 0.25)!],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           )
@@ -672,12 +662,6 @@ class _CaseFilterButton extends StatelessWidget {
     final Color borderColor = selected
         ? fadeColor(accent, 0.32)
         : fadeColor(AppColors.textPrimary, 0.12);
-    final BoxShadow shadow = BoxShadow(
-      color: fadeColor(selected ? accent : Colors.black, selected ? 0.28 : 0.07),
-      blurRadius: selected ? 18 : 12,
-      offset: const Offset(0, 8),
-    );
-
     return Material(
       color: Colors.transparent,
       borderRadius: BorderRadius.circular(16),
@@ -687,7 +671,6 @@ class _CaseFilterButton extends StatelessWidget {
           gradient: gradient,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: borderColor),
-          boxShadow: [shadow],
         ),
         child: InkWell(
           borderRadius: BorderRadius.circular(16),
@@ -695,7 +678,7 @@ class _CaseFilterButton extends StatelessWidget {
           child: Padding(
             padding: EdgeInsets.symmetric(
               horizontal: compact ? 10 : 14,
-              vertical: compact ? 8 : 10,
+              vertical: compact ? 6 : 8,
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
@@ -709,14 +692,15 @@ class _CaseFilterButton extends StatelessWidget {
                 Text(
                   label,
                   style: textTheme.bodyMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                        color: selected
-                            ? Colors.white
-                            : fadeColor(AppColors.textPrimary, 0.85),
-                        fontSize: compact
-                            ? (textTheme.bodySmall?.fontSize ?? 12.0)
-                            : (textTheme.bodyMedium?.fontSize ?? 14.0),
-                        letterSpacing: compact ? 0 : 0.1),
+                    fontWeight: FontWeight.w600,
+                    color: selected
+                        ? Colors.white
+                        : fadeColor(AppColors.textPrimary, 0.85),
+                    fontSize: compact
+                        ? (textTheme.bodySmall?.fontSize ?? 12.0)
+                        : (textTheme.bodyMedium?.fontSize ?? 14.0),
+                    letterSpacing: compact ? 0 : 0.1,
+                  ),
                 ),
               ],
             ),

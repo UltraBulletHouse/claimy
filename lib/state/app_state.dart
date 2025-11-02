@@ -87,6 +87,7 @@ class CaseModel {
     this.pendingQuestion,
     this.productImageUrl,
     this.receiptImageUrl,
+    this.requiresFile = false,
   }) : history = List<CaseUpdate>.from(history);
 
   final String id;
@@ -99,6 +100,7 @@ class CaseModel {
   String? pendingQuestion;
   String? productImageUrl;
   String? receiptImageUrl;
+ bool requiresFile;
 
   DateTime get lastUpdated =>
       history.isNotEmpty ? history.last.timestamp : createdAt;
@@ -277,6 +279,7 @@ class AppState extends ChangeNotifier {
     final pendingQuestionServer = (status == CaseStatus.needsInfo)
         ? (infoReq?['message']?.toString() ?? '')
         : '';
+    final requiresFileServer = (infoReq?['requiresFile'] == true);
 
     final productImageUrl = (m['productImageUrl'] ?? m['product_image_url'])
         ?.toString();
@@ -340,6 +343,7 @@ class AppState extends ChangeNotifier {
          ? (m['receiptImageUrl'] ?? m['receipt_image_url']).toString()
          : (images.length > 1 ? images[1]?.toString() : null),
      pendingQuestion: pendingQuestionServer.isNotEmpty ? pendingQuestionServer : null,
+     requiresFile: requiresFileServer,
     );
   }
 

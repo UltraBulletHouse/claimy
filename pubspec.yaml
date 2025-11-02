@@ -41,6 +41,7 @@ dependencies:
   google_sign_in: ^6.2.1
   file_picker: ^8.0.3
   url_launcher: ^6.3.0
+  image_picker: ^1.0.7
 
 dev_dependencies:
   flutter_test:

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter/services.dart';
+import 'dart:typed_data';
+import 'package:image_picker/image_picker.dart';
 
 import 'package:claimy/core/theme/app_colors.dart';
 import 'package:claimy/core/utils/formatters.dart';
@@ -1168,6 +1170,12 @@ class _CaseDetailScreenState extends State<CaseDetailScreen> {
           if (caseModel.requiresAdditionalInfo)
             AdditionalInfoCard(
               question: caseModel.pendingQuestion!,
+              requiresFile: caseModel.requiresFile,
+              onSubmit: (response, attachmentBytes) => context.read<AppState>().respondToAdditionalInfoServer(
+                caseModel.id,
+                response: response,
+                attachment: attachmentBytes,
+              ),
               onAnswer: (response) => context.read<AppState>().respondToAdditionalInfoServer(caseModel.id, response: response),
             ),
           const SizedBox(height: 16),
@@ -1338,15 +1346,81 @@ class TimelineEntry extends StatelessWidget {
   }
 }
 
-class AdditionalInfoCard extends StatelessWidget {
+class AdditionalInfoCard extends StatefulWidget {
   const AdditionalInfoCard({
     super.key,
     required this.question,
+    required this.onSubmit,
+    this.requiresFile = false,
     required this.onAnswer,
   });
 
   final String question;
+  final bool requiresFile;
+  final void Function(String response, Uint8List? attachmentBytes) onSubmit;
   final void Function(String response) onAnswer;
+
+ @override
+ State<AdditionalInfoCard> createState() => _AdditionalInfoCardState();
+}
+
+class _AdditionalInfoCardState extends State<AdditionalInfoCard> {
+ final _controller = TextEditingController();
+ Uint8List? _attachmentBytes;
+ bool _submitting = false;
+
+ @override
+ void dispose() {
+   _controller.dispose();
+   super.dispose();
+ }
+
+ Future<void> _pickAttachment() async {
+   try {
+     final picker = ImagePicker();
+     final picked = await picker.pickImage(
+       source: ImageSource.gallery,
+       maxWidth: 2048,
+       maxHeight: 2048,
+       imageQuality: 85,
+     );
+     if (picked != null) {
+       final bytes = await picked.readAsBytes();
+       setState(() => _attachmentBytes = bytes);
+     }
+   } catch (e) {
+     if (!mounted) return;
+     ScaffoldMessenger.of(context).showSnackBar(
+       SnackBar(content: Text('Could not pick file: $e')),
+     );
+   }
+ }
+
+ Future<void> _submit() async {
+   final answer = _controller.text.trim();
+   if (answer.isEmpty) {
+     ScaffoldMessenger.of(context).showSnackBar(
+       const SnackBar(content: Text('Please provide an answer')),
+     );
+     return;
+   }
+   if (widget.requiresFile && _attachmentBytes == null) {
+     ScaffoldMessenger.of(context).showSnackBar(
+       const SnackBar(content: Text('Please attach a file as requested')),
+     );
+     return;
+   }
+   setState(() => _submitting = true);
+   try {
+     await Future.sync(() => widget.onSubmit(answer, _attachmentBytes));
+     if (!mounted) return;
+     ScaffoldMessenger.of(context).showSnackBar(
+       const SnackBar(content: Text('Thanks! We received your info.')),
+     );
+   } finally {
+     if (mounted) setState(() => _submitting = false);
+   }
+ }
 
   @override
   Widget build(BuildContext context) {
@@ -1369,7 +1443,7 @@ class AdditionalInfoCard extends StatelessWidget {
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
-                  question,
+                  widget.question,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.w700,
                     color: AppColors.textPrimary,
@@ -1384,15 +1458,15 @@ class AdditionalInfoCard extends StatelessWidget {
             runSpacing: 12,
             children: [
               ElevatedButton(
-                onPressed: () => onAnswer('Yes'),
+                onPressed: () => widget.onAnswer('Yes'),
                 child: const Text('Yes'),
               ),
               ElevatedButton(
-                onPressed: () => onAnswer('No'),
+                onPressed: () => widget.onAnswer('No'),
                 child: const Text('No'),
               ),
               OutlinedButton.icon(
-                onPressed: () => onAnswer('Uploaded photo'),
+                onPressed: () => widget.onAnswer('Uploaded photo'),
                 icon: const Icon(Icons.photo_camera_rounded),
                 label: const Text('Upload photo'),
               ),

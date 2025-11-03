@@ -142,6 +142,7 @@ class ComplaintsApi {
 
   Future<void> submitInfoResponse({
     required String caseId,
+    String? requestId,
     String? answer,
     Uint8List? attachmentBytes,
   }) async {
@@ -155,6 +156,9 @@ class ComplaintsApi {
     if (attachmentBytes != null) {
       final request = http.MultipartRequest('POST', url);
       request.headers['Authorization'] = 'Bearer $idToken';
+      if (requestId != null && requestId.trim().isNotEmpty) {
+        request.fields['requestId'] = requestId.trim();
+      }
       if (answer != null && answer.trim().isNotEmpty) {
         request.fields['answer'] = answer.trim();
       }
@@ -167,13 +171,20 @@ class ComplaintsApi {
         throw SubmitException('Request failed (${resp.statusCode})', statusCode: resp.statusCode);
       }
     } else {
+      final body = <String, dynamic>{};
+      if (requestId != null && requestId.trim().isNotEmpty) {
+        body['requestId'] = requestId.trim();
+      }
+      if (answer != null && answer.trim().isNotEmpty) {
+        body['answer'] = answer.trim();
+      }
       final resp = await http.post(
         url,
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $idToken',
         },
-        body: jsonEncode({'answer': answer ?? ''}),
+        body: jsonEncode(body),
       );
       if (resp.statusCode < 200 || resp.statusCode >= 300) {
         throw SubmitException('Request failed (${resp.statusCode})', statusCode: resp.statusCode);

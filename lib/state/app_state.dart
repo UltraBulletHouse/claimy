@@ -75,6 +75,40 @@ class CaseUpdate {
   final bool isCustomerAction;
 }
 
+class InfoRequestItem {
+  InfoRequestItem({
+    required this.id,
+    required this.message,
+    required this.requiresFile,
+    required this.requestedAt,
+    required this.status,
+  });
+
+  final String id;
+  final String message;
+  final bool requiresFile;
+  final DateTime requestedAt;
+  final String status; // PENDING, ANSWERED, SUPERSEDED
+}
+
+class InfoResponseItem {
+  InfoResponseItem({
+    required this.id,
+    required this.requestId,
+    this.answer,
+    this.fileUrl,
+    this.fileName,
+    required this.submittedAt,
+  });
+
+  final String id;
+  final String requestId;
+  final String? answer;
+  final String? fileUrl;
+  final String? fileName;
+  final DateTime submittedAt;
+}
+
 class CaseModel {
   CaseModel({
     required this.id,
@@ -88,7 +122,11 @@ class CaseModel {
     this.productImageUrl,
     this.receiptImageUrl,
     this.requiresFile = false,
-  }) : history = List<CaseUpdate>.from(history);
+    List<InfoRequestItem>? infoRequestHistory,
+    List<InfoResponseItem>? infoResponseHistory,
+  }) : history = List<CaseUpdate>.from(history),
+       infoRequestHistory = infoRequestHistory ?? [],
+       infoResponseHistory = infoResponseHistory ?? [];
 
   final String id;
   final String storeName;
@@ -100,12 +138,24 @@ class CaseModel {
   String? pendingQuestion;
   String? productImageUrl;
   String? receiptImageUrl;
- bool requiresFile;
+  bool requiresFile;
+  
+  // NEW: History arrays
+  final List<InfoRequestItem> infoRequestHistory;
+  final List<InfoResponseItem> infoResponseHistory;
 
   DateTime get lastUpdated =>
       history.isNotEmpty ? history.last.timestamp : createdAt;
 
   bool get requiresAdditionalInfo => pendingQuestion != null;
+  
+  // Helper: Get all pending requests
+  List<InfoRequestItem> get pendingRequests =>
+      infoRequestHistory.where((r) => r.status == 'PENDING').toList();
+  
+  // Helper: Check if request has response
+  bool hasResponse(String requestId) =>
+      infoResponseHistory.any((r) => r.requestId == requestId);
 }
 
 class Voucher {
@@ -245,11 +295,16 @@ class AppState extends ChangeNotifier {
   }
 
   Future<void> respondToAdditionalInfoServer(String id,
-      {required String response, Uint8List? attachment}) async {
+      {String? requestId, required String response, Uint8List? attachment}) async {
     final caseModel = caseById(id);
     if (caseModel == null) return;
     try {
-      await _api.submitInfoResponse(caseId: id, answer: response, attachmentBytes: attachment);
+      await _api.submitInfoResponse(
+        caseId: id, 
+        requestId: requestId,
+        answer: response, 
+        attachmentBytes: attachment
+      );
       await refreshCasesFromServer();
     } catch (_) {
       // optionally show error
@@ -284,6 +339,56 @@ class AppState extends ChangeNotifier {
     final productImageUrl = (m['productImageUrl'] ?? m['product_image_url'])
         ?.toString();
     final images = (m['images'] as List?)?.cast<dynamic>() ?? const [];
+
+    // NEW: Parse info request history
+    final List<dynamic> rawInfoRequestHistory =
+        (m['infoRequestHistory'] is List) ? (m['infoRequestHistory'] as List) : const [];
+    final List<InfoRequestItem> infoRequestHistory = rawInfoRequestHistory
+        .whereType<Map>()
+        .map((entry) {
+          final id = (entry['id'] ?? '').toString();
+          final message = (entry['message'] ?? '').toString();
+          final requiresFile = entry['requiresFile'] == true;
+          final requestedAtStr = (entry['requestedAt'] ?? '').toString();
+          final requestedAt = requestedAtStr.isNotEmpty
+              ? (DateTime.tryParse(requestedAtStr) ?? DateTime.now())
+              : DateTime.now();
+          final status = (entry['status'] ?? 'PENDING').toString();
+          return InfoRequestItem(
+            id: id,
+            message: message,
+            requiresFile: requiresFile,
+            requestedAt: requestedAt,
+            status: status,
+          );
+        })
+        .toList();
+
+    // NEW: Parse info response history
+    final List<dynamic> rawInfoResponseHistory =
+        (m['infoResponseHistory'] is List) ? (m['infoResponseHistory'] as List) : const [];
+    final List<InfoResponseItem> infoResponseHistory = rawInfoResponseHistory
+        .whereType<Map>()
+        .map((entry) {
+          final id = (entry['id'] ?? '').toString();
+          final requestId = (entry['requestId'] ?? '').toString();
+          final answer = entry['answer']?.toString();
+          final fileUrl = entry['fileUrl']?.toString();
+          final fileName = entry['fileName']?.toString();
+          final submittedAtStr = (entry['submittedAt'] ?? '').toString();
+          final submittedAt = submittedAtStr.isNotEmpty
+              ? (DateTime.tryParse(submittedAtStr) ?? DateTime.now())
+              : DateTime.now();
+          return InfoResponseItem(
+            id: id,
+            requestId: requestId,
+            answer: answer,
+            fileUrl: fileUrl,
+            fileName: fileName,
+            submittedAt: submittedAt,
+          );
+        })
+        .toList();
 
     // Map backend statusHistory into our CaseUpdate timeline
     final List<dynamic> rawHistory =
@@ -342,8 +447,10 @@ class AppState extends ChangeNotifier {
              false)
          ? (m['receiptImageUrl'] ?? m['receipt_image_url']).toString()
          : (images.length > 1 ? images[1]?.toString() : null),
-     pendingQuestion: pendingQuestionServer.isNotEmpty ? pendingQuestionServer : null,
-     requiresFile: requiresFileServer,
+      pendingQuestion: pendingQuestionServer.isNotEmpty ? pendingQuestionServer : null,
+      requiresFile: requiresFileServer,
+      infoRequestHistory: infoRequestHistory,
+      infoResponseHistory: infoResponseHistory,
     );
   }
 

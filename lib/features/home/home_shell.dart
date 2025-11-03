@@ -1167,7 +1167,18 @@ class _CaseDetailScreenState extends State<CaseDetailScreen> {
             ),
           ),
           const SizedBox(height: 16),
-          if (caseModel.requiresAdditionalInfo)
+          // NEW: Show all pending requests
+          if (caseModel.pendingRequests.isNotEmpty)
+            ...caseModel.pendingRequests.map((request) => Padding(
+              padding: const EdgeInsets.only(bottom: 16),
+              child: PendingRequestCard(
+                request: request,
+                caseId: caseModel.id,
+                hasResponse: caseModel.hasResponse(request.id),
+              ),
+            )),
+          // Legacy: Show old-style card if using legacy fields
+          if (caseModel.requiresAdditionalInfo && caseModel.pendingRequests.isEmpty)
             AdditionalInfoCard(
               question: caseModel.pendingQuestion!,
               requiresFile: caseModel.requiresFile,
@@ -1624,5 +1635,271 @@ class _EmptyState extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+class PendingRequestCard extends StatefulWidget {
+  const PendingRequestCard({
+    super.key,
+    required this.request,
+    required this.caseId,
+    required this.hasResponse,
+  });
+
+  final InfoRequestItem request;
+  final String caseId;
+  final bool hasResponse;
+
+  @override
+  State<PendingRequestCard> createState() => _PendingRequestCardState();
+}
+
+class _PendingRequestCardState extends State<PendingRequestCard> {
+  final _controller = TextEditingController();
+  Uint8List? _attachmentBytes;
+  bool _submitting = false;
+  bool _showForm = false;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  Future<void> _pickAttachment() async {
+    try {
+      final picker = ImagePicker();
+      final picked = await picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 2048,
+        maxHeight: 2048,
+        imageQuality: 85,
+      );
+      if (picked != null) {
+        final bytes = await picked.readAsBytes();
+        setState(() => _attachmentBytes = bytes);
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not pick file: $e')),
+      );
+    }
+  }
+
+  Future<void> _submit() async {
+    final answer = _controller.text.trim();
+    if (answer.isEmpty && _attachmentBytes == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please provide an answer or attach a file')),
+      );
+      return;
+    }
+    if (widget.request.requiresFile && _attachmentBytes == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please attach a file as requested')),
+      );
+      return;
+    }
+    setState(() => _submitting = true);
+    try {
+      await context.read<AppState>().respondToAdditionalInfoServer(
+        widget.caseId,
+        requestId: widget.request.id,
+        response: answer.isNotEmpty ? answer : 'File attached',
+        attachment: _attachmentBytes,
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Thanks! We received your info.')),
+      );
+      setState(() {
+        _showForm = false;
+        _controller.clear();
+        _attachmentBytes = null;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to submit: $e')),
+      );
+    } finally {
+      if (mounted) setState(() => _submitting = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: widget.hasResponse 
+          ? fadeColor(Colors.green, 0.12)
+          : fadeColor(AppColors.warning, 0.12),
+        borderRadius: BorderRadius.circular(24),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(
+                widget.hasResponse 
+                  ? Icons.check_circle_outline_rounded
+                  : Icons.chat_bubble_outline_rounded,
+                color: widget.hasResponse ? Colors.green : AppColors.warning,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      widget.request.message,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Requested ${_formatDate(widget.request.requestedAt)}',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: fadeColor(AppColors.textPrimary, 0.6),
+                      ),
+                    ),
+                    if (widget.request.requiresFile)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.attach_file,
+                              size: 16,
+                              color: fadeColor(AppColors.textPrimary, 0.6),
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              'File upload required',
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                color: fadeColor(AppColors.textPrimary, 0.6),
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          if (widget.hasResponse)
+            Padding(
+              padding: const EdgeInsets.only(top: 12),
+              child: Text(
+                '✓ Response submitted',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Colors.green,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          if (!widget.hasResponse) ...[
+            const SizedBox(height: 16),
+            if (!_showForm)
+              ElevatedButton(
+                onPressed: () => setState(() => _showForm = true),
+                child: const Text('Respond'),
+              )
+            else ...[
+              TextField(
+                controller: _controller,
+                decoration: const InputDecoration(
+                  hintText: 'Type your answer...',
+                  border: OutlineInputBorder(),
+                ),
+                maxLines: 3,
+              ),
+              const SizedBox(height: 12),
+              if (widget.request.requiresFile || _attachmentBytes != null)
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (_attachmentBytes != null)
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.green.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.check_circle, color: Colors.green, size: 20),
+                            const SizedBox(width: 8),
+                            const Text('File attached'),
+                            const Spacer(),
+                            IconButton(
+                              icon: const Icon(Icons.close, size: 20),
+                              onPressed: () => setState(() => _attachmentBytes = null),
+                            ),
+                          ],
+                        ),
+                      )
+                    else
+                      OutlinedButton.icon(
+                        onPressed: _pickAttachment,
+                        icon: const Icon(Icons.attach_file),
+                        label: Text(widget.request.requiresFile 
+                          ? 'Attach file (required)' 
+                          : 'Attach file (optional)'),
+                      ),
+                    const SizedBox(height: 12),
+                  ],
+                ),
+              Row(
+                children: [
+                  ElevatedButton(
+                    onPressed: _submitting ? null : _submit,
+                    child: _submitting
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Text('Submit'),
+                  ),
+                  const SizedBox(width: 12),
+                  TextButton(
+                    onPressed: () => setState(() {
+                      _showForm = false;
+                      _controller.clear();
+                      _attachmentBytes = null;
+                    }),
+                    child: const Text('Cancel'),
+                  ),
+                ],
+              ),
+            ],
+          ],
+        ],
+      ),
+    );
+  }
+
+  String _formatDate(DateTime date) {
+    final now = DateTime.now();
+    final difference = now.difference(date);
+    
+    if (difference.inDays == 0) {
+      return 'today';
+    } else if (difference.inDays == 1) {
+      return 'yesterday';
+    } else if (difference.inDays < 7) {
+      return '${difference.inDays} days ago';
+    } else {
+      return '${date.day}/${date.month}/${date.year}';
+    }
   }
 }

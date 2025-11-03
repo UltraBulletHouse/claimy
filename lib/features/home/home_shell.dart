@@ -1838,8 +1838,7 @@ class _PendingRequestCardState extends State<PendingRequestCard> {
                           children: [
                             const Icon(Icons.check_circle, color: Colors.green, size: 20),
                             const SizedBox(width: 8),
-                            const Text('File attached'),
-                            const Spacer(),
+                            const Expanded(child: Text('File attached')),
                             IconButton(
                               icon: const Icon(Icons.close, size: 20),
                               onPressed: () => setState(() => _attachmentBytes = null),
@@ -1860,24 +1859,28 @@ class _PendingRequestCardState extends State<PendingRequestCard> {
                 ),
               Row(
                 children: [
-                  ElevatedButton(
-                    onPressed: _submitting ? null : _submit,
-                    child: _submitting
-                        ? const SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Text('Submit'),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: _submitting ? null : _submit,
+                      child: _submitting
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Text('Submit'),
+                    ),
                   ),
                   const SizedBox(width: 12),
-                  TextButton(
-                    onPressed: () => setState(() {
-                      _showForm = false;
-                      _controller.clear();
-                      _attachmentBytes = null;
-                    }),
-                    child: const Text('Cancel'),
+                  Expanded(
+                    child: TextButton(
+                      onPressed: () => setState(() {
+                        _showForm = false;
+                        _controller.clear();
+                        _attachmentBytes = null;
+                      }),
+                      child: const Text('Cancel'),
+                    ),
                   ),
                 ],
               ),

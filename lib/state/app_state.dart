@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:firebase_auth/firebase_auth.dart';
@@ -7,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:claimy/core/api/complaints_api.dart';
 import 'package:claimy/core/theme/app_colors.dart';
 import 'package:claimy/services/auth_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 enum CaseStatus { pending, inReview, needsInfo, approved, rejected }
 
@@ -141,7 +143,7 @@ class CaseModel {
   String? productImageUrl;
   String? receiptImageUrl;
   bool requiresFile;
-  
+
   // NEW: History arrays
   final List<InfoRequestItem> infoRequestHistory;
   final List<InfoResponseItem> infoResponseHistory;
@@ -150,11 +152,11 @@ class CaseModel {
       history.isNotEmpty ? history.last.timestamp : createdAt;
 
   bool get requiresAdditionalInfo => pendingQuestion != null;
-  
+
   // Helper: Get all pending requests
   List<InfoRequestItem> get pendingRequests =>
       infoRequestHistory.where((r) => r.status == 'PENDING').toList();
-  
+
   // Helper: Check if request has response
   bool hasResponse(String requestId) =>
       infoResponseHistory.any((r) => r.requestId == requestId);
@@ -179,6 +181,10 @@ class Voucher {
 }
 
 class AppState extends ChangeNotifier {
+  static const Duration _cacheStaleAfter = Duration(minutes: 5);
+  static const String _casesCacheKeyPrefix = 'app_state.cases';
+  static const String _storesCacheKeyPrefix = 'app_state.stores';
+
   AppState() {
     _authService = AuthService();
     _api = ComplaintsApi();
@@ -191,6 +197,9 @@ class AppState extends ChangeNotifier {
         if (_isAuthenticated) {
           // Immediately notify so UI can transition to HomeShell
           notifyListeners();
+          if (user != null) {
+            unawaited(_restoreCachesForUser(user.uid));
+          }
           // Load cases in the background; UI is already switched
           refreshCasesFromServer();
           refreshStoresFromServer(force: true);
@@ -218,6 +227,8 @@ class AppState extends ChangeNotifier {
   String? _storesError;
   bool _isLoadingCases = false;
   String? _casesError;
+  DateTime? _casesFetchedAt;
+  DateTime? _storesFetchedAt;
   bool _isAuthenticated = false;
   HomeLanding _landingPreference = HomeLanding.cases;
 
@@ -310,16 +321,20 @@ class AppState extends ChangeNotifier {
     return 'there';
   }
 
-  Future<void> respondToAdditionalInfoServer(String id,
-      {String? requestId, required String response, Uint8List? attachment}) async {
+  Future<void> respondToAdditionalInfoServer(
+    String id, {
+    String? requestId,
+    required String response,
+    Uint8List? attachment,
+  }) async {
     final caseModel = caseById(id);
     if (caseModel == null) return;
     try {
       await _api.submitInfoResponse(
-        caseId: id, 
+        caseId: id,
         requestId: requestId,
-        answer: response, 
-        attachmentBytes: attachment
+        answer: response,
+        attachmentBytes: attachment,
       );
       await refreshCasesFromServer();
     } catch (_) {
@@ -355,7 +370,12 @@ class AppState extends ChangeNotifier {
     }
 
     if (!force && _stores.isNotEmpty) {
-      return;
+      final isStale =
+          _storesFetchedAt == null ||
+          DateTime.now().difference(_storesFetchedAt!) > _cacheStaleAfter;
+      if (!isStale) {
+        return;
+      }
     }
 
     _isLoadingStores = true;
@@ -368,6 +388,12 @@ class AppState extends ChangeNotifier {
         ..clear()
         ..addAll(results);
       _storesError = null;
+      final fetchedAt = DateTime.now();
+      _storesFetchedAt = fetchedAt;
+      final userId = _currentUser?.uid;
+      if (userId != null) {
+        unawaited(_saveStoresToCache(userId, results, fetchedAt));
+      }
     } catch (e) {
       _storesError = e.toString();
     } finally {
@@ -378,7 +404,8 @@ class AppState extends ChangeNotifier {
 
   Future<void> refreshCasesFromServer() async {
     if (!_isAuthenticated) {
-      final hadData = _cases.isNotEmpty || _casesError != null || _isLoadingCases;
+      final hadData =
+          _cases.isNotEmpty || _casesError != null || _isLoadingCases;
       _resetCasesState();
       if (hadData) {
         notifyListeners();
@@ -400,6 +427,12 @@ class AppState extends ChangeNotifier {
         ..clear()
         ..addAll(result.items.map(_mapServerCaseToModel));
       _casesError = null;
+      final fetchedAt = DateTime.now();
+      _casesFetchedAt = fetchedAt;
+      final userId = _currentUser?.uid;
+      if (userId != null) {
+        unawaited(_saveCasesToCache(userId, result.items, fetchedAt));
+      }
     } catch (e) {
       _casesError = e.toString();
     } finally {
@@ -408,6 +441,116 @@ class AppState extends ChangeNotifier {
     }
   }
 
+  Future<void> _saveCasesToCache(
+    String uid,
+    List<Map<String, dynamic>> rawCases,
+    DateTime timestamp,
+  ) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_casesCacheKey(uid), jsonEncode(rawCases));
+      await prefs.setInt(
+        _casesCacheTimestampKey(uid),
+        timestamp.millisecondsSinceEpoch,
+      );
+    } catch (_) {
+      // Ignore caching errors; fresh data will still be shown.
+    }
+  }
+
+  Future<void> _saveStoresToCache(
+    String uid,
+    List<StoreCatalogEntry> stores,
+    DateTime timestamp,
+  ) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final payload = stores.map((s) => s.toJson()).toList(growable: false);
+      await prefs.setString(_storesCacheKey(uid), jsonEncode(payload));
+      await prefs.setInt(
+        _storesCacheTimestampKey(uid),
+        timestamp.millisecondsSinceEpoch,
+      );
+    } catch (_) {
+      // Ignore caching errors; fresh data will still be shown.
+    }
+  }
+
+  Future<void> _restoreCachesForUser(String uid) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      bool updated = false;
+
+      final casesJson = prefs.getString(_casesCacheKey(uid));
+      final casesTimestamp = prefs.getInt(_casesCacheTimestampKey(uid));
+      _casesFetchedAt = casesTimestamp != null
+          ? DateTime.fromMillisecondsSinceEpoch(casesTimestamp)
+          : null;
+      if (casesJson != null && casesJson.isNotEmpty) {
+        final decoded = jsonDecode(casesJson);
+        if (decoded is List) {
+          final rawCases = <Map<String, dynamic>>[];
+          for (final item in decoded) {
+            if (item is Map) {
+              rawCases.add(Map<String, dynamic>.from(item));
+            }
+          }
+          if (rawCases.isNotEmpty) {
+            _cases
+              ..clear()
+              ..addAll(rawCases.map(_mapServerCaseToModel));
+            _casesError = null;
+            updated = true;
+          }
+        }
+      }
+
+      final storesJson = prefs.getString(_storesCacheKey(uid));
+      final storesTimestamp = prefs.getInt(_storesCacheTimestampKey(uid));
+      _storesFetchedAt = storesTimestamp != null
+          ? DateTime.fromMillisecondsSinceEpoch(storesTimestamp)
+          : null;
+      if (storesJson != null && storesJson.isNotEmpty) {
+        final decoded = jsonDecode(storesJson);
+        if (decoded is List) {
+          final restoredStores = <StoreCatalogEntry>[];
+          for (final item in decoded) {
+            if (item is Map) {
+              final entry = StoreCatalogEntry.fromJson(
+                Map<String, dynamic>.from(item),
+              );
+              if (entry.storeId.isNotEmpty && entry.name.isNotEmpty) {
+                restoredStores.add(entry);
+              }
+            }
+          }
+          if (restoredStores.isNotEmpty) {
+            _stores
+              ..clear()
+              ..addAll(restoredStores);
+            _storesError = null;
+            updated = true;
+          }
+        }
+      }
+
+      if (updated) {
+        notifyListeners();
+      }
+    } catch (_) {
+      // Ignore cache restore failures; live fetch will populate data shortly.
+    }
+  }
+
+  String _casesCacheKey(String uid) => '$_casesCacheKeyPrefix.$uid.data';
+
+  String _casesCacheTimestampKey(String uid) => '$_casesCacheKeyPrefix.$uid.ts';
+
+  String _storesCacheKey(String uid) => '$_storesCacheKeyPrefix.$uid.data';
+
+  String _storesCacheTimestampKey(String uid) =>
+      '$_storesCacheKeyPrefix.$uid.ts';
+
   CaseModel _mapServerCaseToModel(Map<String, dynamic> m) {
     final createdAtStr = (m['createdAt'] ?? m['created_at'] ?? '') as String?;
     final createdAt = createdAtStr != null && createdAtStr.isNotEmpty
@@ -415,7 +558,9 @@ class AppState extends ChangeNotifier {
         : DateTime.now();
     final statusStr = (m['status'] ?? 'PENDING').toString().toUpperCase();
     final status = _statusFromServer(statusStr);
-    final infoReq = (m['infoRequest'] is Map) ? (m['infoRequest'] as Map) : null;
+    final infoReq = (m['infoRequest'] is Map)
+        ? (m['infoRequest'] as Map)
+        : null;
     final pendingQuestionServer = (status == CaseStatus.needsInfo)
         ? (infoReq?['message']?.toString() ?? '')
         : '';
@@ -427,7 +572,9 @@ class AppState extends ChangeNotifier {
 
     // NEW: Parse info request history
     final List<dynamic> rawInfoRequestHistory =
-        (m['infoRequestHistory'] is List) ? (m['infoRequestHistory'] as List) : const [];
+        (m['infoRequestHistory'] is List)
+        ? (m['infoRequestHistory'] as List)
+        : const [];
     final List<InfoRequestItem> infoRequestHistory = rawInfoRequestHistory
         .whereType<Map>()
         .map((entry) {
@@ -453,7 +600,9 @@ class AppState extends ChangeNotifier {
 
     // NEW: Parse info response history
     final List<dynamic> rawInfoResponseHistory =
-        (m['infoResponseHistory'] is List) ? (m['infoResponseHistory'] as List) : const [];
+        (m['infoResponseHistory'] is List)
+        ? (m['infoResponseHistory'] as List)
+        : const [];
     final List<InfoResponseItem> infoResponseHistory = rawInfoResponseHistory
         .whereType<Map>()
         .map((entry) {
@@ -478,29 +627,26 @@ class AppState extends ChangeNotifier {
         .toList();
 
     // Map backend statusHistory into our CaseUpdate timeline
-    final List<dynamic> rawHistory =
-        (m['statusHistory'] is List) ? (m['statusHistory'] as List) : const [];
+    final List<dynamic> rawHistory = (m['statusHistory'] is List)
+        ? (m['statusHistory'] as List)
+        : const [];
 
-    List<CaseUpdate> timeline = rawHistory
-        .whereType<Map>()
-        .map((entry) {
-          final statusRaw = (entry['status'] ?? '').toString().toUpperCase();
-          final s = _statusFromServer(statusRaw);
-          final note = (entry['note'] ?? '').toString();
-          final atStr = (entry['at'] ?? entry['timestamp'] ?? '').toString();
-          final at = atStr.isNotEmpty
-              ? (DateTime.tryParse(atStr) ?? createdAt)
-              : createdAt;
-          final msg = _statusMessageForTimeline(s, note);
-          return CaseUpdate(
-            status: s,
-            message: msg,
-            timestamp: at,
-            isCustomerAction: false,
-          );
-        })
-        .toList()
-      ..sort((a, b) => a.timestamp.compareTo(b.timestamp));
+    List<CaseUpdate> timeline = rawHistory.whereType<Map>().map((entry) {
+      final statusRaw = (entry['status'] ?? '').toString().toUpperCase();
+      final s = _statusFromServer(statusRaw);
+      final note = (entry['note'] ?? '').toString();
+      final atStr = (entry['at'] ?? entry['timestamp'] ?? '').toString();
+      final at = atStr.isNotEmpty
+          ? (DateTime.tryParse(atStr) ?? createdAt)
+          : createdAt;
+      final msg = _statusMessageForTimeline(s, note);
+      return CaseUpdate(
+        status: s,
+        message: msg,
+        timestamp: at,
+        isCustomerAction: false,
+      );
+    }).toList()..sort((a, b) => a.timestamp.compareTo(b.timestamp));
 
     // Ensure there's an initial submitted entry at createdAt
     final hasSubmitted = timeline.any((e) => e.status == CaseStatus.pending);
@@ -528,13 +674,15 @@ class AppState extends ChangeNotifier {
           ? productImageUrl
           : (images.isNotEmpty ? images.first?.toString() : null),
       receiptImageUrl:
-         ((m['receiptImageUrl'] ?? m['receipt_image_url'])
-                 ?.toString()
-                 .isNotEmpty ??
-             false)
-         ? (m['receiptImageUrl'] ?? m['receipt_image_url']).toString()
-         : (images.length > 1 ? images[1]?.toString() : null),
-      pendingQuestion: pendingQuestionServer.isNotEmpty ? pendingQuestionServer : null,
+          ((m['receiptImageUrl'] ?? m['receipt_image_url'])
+                  ?.toString()
+                  .isNotEmpty ??
+              false)
+          ? (m['receiptImageUrl'] ?? m['receipt_image_url']).toString()
+          : (images.length > 1 ? images[1]?.toString() : null),
+      pendingQuestion: pendingQuestionServer.isNotEmpty
+          ? pendingQuestionServer
+          : null,
       requiresFile: requiresFileServer,
       infoRequestHistory: infoRequestHistory,
       infoResponseHistory: infoResponseHistory,
@@ -613,5 +761,4 @@ class AppState extends ChangeNotifier {
     voucher.used = !voucher.used;
     notifyListeners();
   }
-
 }

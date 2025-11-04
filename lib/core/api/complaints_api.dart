@@ -278,6 +278,24 @@ class StoreCatalogEntry {
   final String primaryColor;
   final String secondaryColor;
   final String email;
+
+  factory StoreCatalogEntry.fromJson(Map<String, dynamic> json) {
+    return StoreCatalogEntry(
+      storeId: (json['storeId'] ?? json['store_id'] ?? '').toString(),
+      name: (json['name'] ?? '').toString(),
+      primaryColor: (json['primaryColor'] ?? json['primary_color'] ?? '').toString(),
+      secondaryColor: (json['secondaryColor'] ?? json['secondary_color'] ?? '').toString(),
+      email: (json['email'] ?? '').toString(),
+    );
+  }
+
+  Map<String, dynamic> toJson() => <String, dynamic>{
+        'storeId': storeId,
+        'name': name,
+        'primaryColor': primaryColor,
+        'secondaryColor': secondaryColor,
+        'email': email,
+      };
 }
 
 class SubmitResult {

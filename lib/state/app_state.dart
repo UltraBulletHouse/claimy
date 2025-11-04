@@ -80,6 +80,7 @@ class InfoRequestItem {
     required this.id,
     required this.message,
     required this.requiresFile,
+    required this.requiresYesNo,
     required this.requestedAt,
     required this.status,
   });
@@ -87,6 +88,7 @@ class InfoRequestItem {
   final String id;
   final String message;
   final bool requiresFile;
+  final bool requiresYesNo;
   final DateTime requestedAt;
   final String status; // PENDING, ANSWERED, SUPERSEDED
 }
@@ -349,6 +351,7 @@ class AppState extends ChangeNotifier {
           final id = (entry['id'] ?? '').toString();
           final message = (entry['message'] ?? '').toString();
           final requiresFile = entry['requiresFile'] == true;
+          final requiresYesNo = entry['requiresYesNo'] == true;
           final requestedAtStr = (entry['requestedAt'] ?? '').toString();
           final requestedAt = requestedAtStr.isNotEmpty
               ? (DateTime.tryParse(requestedAtStr) ?? DateTime.now())
@@ -358,6 +361,7 @@ class AppState extends ChangeNotifier {
             id: id,
             message: message,
             requiresFile: requiresFile,
+            requiresYesNo: requiresYesNo,
             requestedAt: requestedAt,
             status: status,
           );

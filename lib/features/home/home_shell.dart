@@ -1677,7 +1677,11 @@ class _PendingRequestCardState extends State<PendingRequestCard> {
       );
       if (picked != null) {
         final bytes = await picked.readAsBytes();
-        setState(() => _attachmentBytes = bytes);
+        if (widget.request.requiresFile) {
+          _submitFile(bytes);
+        } else {
+          setState(() => _attachmentBytes = bytes);
+        }
       }
     } catch (e) {
       if (!mounted) return;
@@ -1722,6 +1726,51 @@ class _PendingRequestCardState extends State<PendingRequestCard> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Failed to submit: $e')),
+      );
+    } finally {
+      if (mounted) setState(() => _submitting = false);
+    }
+  }
+
+  Future<void> _answer(String answer) async {
+    setState(() => _submitting = true);
+    try {
+      await context.read<AppState>().respondToAdditionalInfoServer(
+        widget.caseId,
+        requestId: widget.request.id,
+        response: answer,
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Thanks! We received your info.')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to submit: $e')),
+      );
+    } finally {
+      if (mounted) setState(() => _submitting = false);
+    }
+  }
+
+  Future<void> _submitFile(Uint8List attachment) async {
+    setState(() => _submitting = true);
+    try {
+      await context.read<AppState>().respondToAdditionalInfoServer(
+        widget.caseId,
+        requestId: widget.request.id,
+        response: 'File attached',
+        attachment: attachment,
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Thanks! We received your file.')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to submit file: $e')),
       );
     } finally {
       if (mounted) setState(() => _submitting = false);
@@ -1808,10 +1857,40 @@ class _PendingRequestCardState extends State<PendingRequestCard> {
             ),
           if (!widget.hasResponse) ...[
             const SizedBox(height: 16),
-            if (!_showForm)
-              ElevatedButton(
-                onPressed: () => setState(() => _showForm = true),
-                child: const Text('Respond'),
+            if (widget.request.requiresYesNo)
+              Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: _submitting ? null : () => _answer('Yes'),
+                      child: _submitting ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)) : const Text('Yes'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: _submitting ? null : () => _answer('No'),
+                      child: _submitting ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)) : const Text('No'),
+                    ),
+                  ),
+                ],
+              )
+            else if (widget.request.requiresFile)
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: _submitting ? null : _pickAttachment,
+                  icon: const Icon(Icons.attach_file),
+                  label: const Text('Attach File'),
+                ),
+              )
+            else if (!_showForm)
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () => setState(() => _showForm = true),
+                  child: const Text('Respond'),
+                ),
               )
             else ...[
               TextField(
@@ -1820,43 +1899,9 @@ class _PendingRequestCardState extends State<PendingRequestCard> {
                   hintText: 'Type your answer...',
                   border: OutlineInputBorder(),
                 ),
-                maxLines: 3,
+                maxLines: 1,
               ),
               const SizedBox(height: 12),
-              if (widget.request.requiresFile || _attachmentBytes != null)
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    if (_attachmentBytes != null)
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: Colors.green.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Row(
-                          children: [
-                            const Icon(Icons.check_circle, color: Colors.green, size: 20),
-                            const SizedBox(width: 8),
-                            const Expanded(child: Text('File attached')),
-                            IconButton(
-                              icon: const Icon(Icons.close, size: 20),
-                              onPressed: () => setState(() => _attachmentBytes = null),
-                            ),
-                          ],
-                        ),
-                      )
-                    else
-                      OutlinedButton.icon(
-                        onPressed: _pickAttachment,
-                        icon: const Icon(Icons.attach_file),
-                        label: Text(widget.request.requiresFile 
-                          ? 'Attach file (required)' 
-                          : 'Attach file (optional)'),
-                      ),
-                    const SizedBox(height: 12),
-                  ],
-                ),
               Row(
                 children: [
                   Expanded(

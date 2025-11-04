@@ -12,10 +12,7 @@ class AppLocalizations {
   static const LocalizationsDelegate<AppLocalizations> delegate =
       _AppLocalizationsDelegate();
 
-  static const List<Locale> supportedLocales = [
-    Locale('en'),
-    Locale('pl'),
-  ];
+  static const List<Locale> supportedLocales = [Locale('en'), Locale('pl')];
 
   static AppLocalizations of(BuildContext context) {
     return Localizations.of<AppLocalizations>(context, AppLocalizations)!;
@@ -25,8 +22,8 @@ class AppLocalizations {
 
   String _languageKey() =>
       supportedLocales.any((l) => l.languageCode == locale.languageCode)
-          ? locale.languageCode
-          : 'en';
+      ? locale.languageCode
+      : 'en';
 
   static final Map<String, Map<String, String>> _localizedValues = {
     'en': {
@@ -46,8 +43,7 @@ class AppLocalizations {
       'loginButton': 'Log in',
       'newToClaimy': 'New to Claimy?',
       'createAccountCta': 'Create an account',
-      'signInTagline':
-          'Sign in to continue managing your claims and rewards.',
+      'signInTagline': 'Sign in to continue managing your claims and rewards.',
       'signUpFailed': 'Sign up failed: {error}',
       'createAccountTitle': 'Create account',
       'signUpHeading': 'Let’s get you started',
@@ -166,8 +162,7 @@ class AppLocalizations {
       'descriptionSubtitle':
           'Let us know what went wrong. Keep it short and friendly.',
       'descriptionLabel': 'Describe the issue (optional)',
-      'descriptionHint':
-          'Tell us what went wrong so we can fix it.',
+      'descriptionHint': 'Tell us what went wrong so we can fix it.',
       'photosTitle': 'Add your photos',
       'photosDescription':
           'Upload a product photo and the receipt so we can verify your claim.',
@@ -206,8 +201,7 @@ class AppLocalizations {
       'alreadyHaveAccount': 'Masz już konto?',
       'backToLogin': 'Wróć do logowania',
       'enterValidEmail': 'Podaj poprawny adres e-mail, aby kontynuować',
-      'resetLinkSent':
-          'Sprawdź {email}, aby znaleźć link do resetu hasła.',
+      'resetLinkSent': 'Sprawdź {email}, aby znaleźć link do resetu hasła.',
       'resetEmailFailed':
           'Nie udało się wysłać wiadomości resetującej: {error}',
       'resetPasswordTitle': 'Resetuj hasło',
@@ -223,7 +217,7 @@ class AppLocalizations {
       'signOut': 'Wyloguj się',
       'tabCases': 'Moje sprawy',
       'tabRewards': 'Moje nagrody',
-      'filterAllCases': 'Wszystkie sprawy',
+      'filterAllCases': 'Wszystkie',
       'casesSearchHint': 'Szukaj sklepu lub produktu',
       'casesEmptyTitle': 'Brak spraw',
       'casesEmptyBody': 'Zmień filtry lub utwórz nowe zgłoszenie.',
@@ -234,15 +228,14 @@ class AppLocalizations {
       'rewardsIntro':
           'Korzystaj z kuponów od razu podczas zakupów w sklepie lub online.',
       'rewardsEmptyTitle': 'Brak aktywnych nagród',
-      'rewardsEmptyBody':
-          'Składaj zgłoszenia, aby odblokować kupony i zwroty.',
+      'rewardsEmptyBody': 'Składaj zgłoszenia, aby odblokować kupony i zwroty.',
       'caseUpdated': 'Zaktualizowano {time}',
       'caseNewUpdate': 'Nowa aktualizacja',
       'caseNeedsInfo': 'Potrzebujemy od Ciebie krótkiej informacji.',
       'statusPending': 'Oczekujące',
-      'statusInReview': 'W trakcie weryfikacji',
-      'statusNeedsInfo': 'Wymaga informacji',
-      'statusApproved': 'Zaakceptowane',
+      'statusInReview': 'W trakcie',
+      'statusNeedsInfo': 'Informacja',
+      'statusApproved': 'Zaakcept.',
       'statusRejected': 'Odrzucone',
       'infoResponseNoted': 'Dziękujemy! Zanotowaliśmy „{response}”.',
       'caseNotFound': 'Nie znaleziono sprawy',
@@ -313,8 +306,7 @@ class AppLocalizations {
       'productName': 'Nazwa produktu',
       'productHint': 'np. Mleko migdałowe bio 1 l',
       'describeWhatHappened': 'Opisz, co się stało',
-      'descriptionSubtitle':
-          'Napisz, co poszło nie tak. Krótko i na temat.',
+      'descriptionSubtitle': 'Napisz, co poszło nie tak. Krótko i na temat.',
       'descriptionLabel': 'Opisz problem (opcjonalnie)',
       'descriptionHint':
           'Powiedz, co poszło nie tak, abyśmy mogli to naprawić.',
@@ -331,9 +323,7 @@ class AppLocalizations {
 
   String _lookup(String key) {
     final lang = _languageKey();
-    return _localizedValues[lang]?[key] ??
-        _localizedValues['en']?[key] ??
-        key;
+    return _localizedValues[lang]?[key] ?? _localizedValues['en']?[key] ?? key;
   }
 
   String _format(String key, Map<String, String> params) {
@@ -453,16 +443,14 @@ class AppLocalizations {
   String get imageSizeMessage => _lookup('imageSizeMessage');
   String get failedToReadFile => _lookup('failedToReadFile');
 
-  String loginFailed(String error) =>
-      _format('loginFailed', {'error': error});
+  String loginFailed(String error) => _format('loginFailed', {'error': error});
   String signUpFailed(String error) =>
       _format('signUpFailed', {'error': error});
   String resetLinkSent(String email) =>
       _format('resetLinkSent', {'email': email});
   String resetEmailFailed(String error) =>
       _format('resetEmailFailed', {'error': error});
-  String homeGreeting(String name) =>
-      _format('homeGreeting', {'name': name});
+  String homeGreeting(String name) => _format('homeGreeting', {'name': name});
   String caseUpdated(DateTime dateTime) =>
       _format('caseUpdated', {'time': formatRelativeTime(dateTime)});
   String infoResponseNoted(String response) =>
@@ -471,8 +459,7 @@ class AppLocalizations {
       _format('caseCreated', {'date': formatMediumDate(dateTime)});
   String caseLastUpdate(DateTime dateTime) =>
       _format('caseLastUpdate', {'time': formatRelativeTime(dateTime)});
-  String couldNotOpen(String url) =>
-      _format('couldNotOpen', {'url': url});
+  String couldNotOpen(String url) => _format('couldNotOpen', {'url': url});
   String filePickFailed(String error) =>
       _format('filePickFailed', {'error': error});
   String voucherExpires(int days) {
@@ -552,9 +539,9 @@ class _AppLocalizationsDelegate
   const _AppLocalizationsDelegate();
 
   @override
-  bool isSupported(Locale locale) =>
-      AppLocalizations.supportedLocales
-          .any((supported) => supported.languageCode == locale.languageCode);
+  bool isSupported(Locale locale) => AppLocalizations.supportedLocales.any(
+    (supported) => supported.languageCode == locale.languageCode,
+  );
 
   @override
   Future<AppLocalizations> load(Locale locale) {

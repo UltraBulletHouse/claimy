@@ -195,7 +195,7 @@ class AppState extends ChangeNotifier {
           refreshCasesFromServer();
           refreshStoresFromServer(force: true);
         } else {
-          _cases.clear();
+          _resetCasesState();
           _clearStoresState();
           notifyListeners();
         }
@@ -216,6 +216,8 @@ class AppState extends ChangeNotifier {
   final List<StoreCatalogEntry> _stores = [];
   bool _isLoadingStores = false;
   String? _storesError;
+  bool _isLoadingCases = false;
+  String? _casesError;
   bool _isAuthenticated = false;
   HomeLanding _landingPreference = HomeLanding.cases;
 
@@ -241,6 +243,8 @@ class AppState extends ChangeNotifier {
   List<StoreCatalogEntry> get stores => List.unmodifiable(_stores);
   bool get isLoadingStores => _isLoadingStores;
   String? get storesError => _storesError;
+  bool get isLoadingCases => _isLoadingCases;
+  String? get casesError => _casesError;
 
   Future<void> signIn({required String email, required String password}) async {
     await _authService.signInWithEmail(email: email, password: password);
@@ -323,6 +327,12 @@ class AppState extends ChangeNotifier {
     }
   }
 
+  void _resetCasesState() {
+    _cases.clear();
+    _casesError = null;
+    _isLoadingCases = false;
+  }
+
   void _clearStoresState() {
     _stores.clear();
     _storesError = null;
@@ -367,14 +377,34 @@ class AppState extends ChangeNotifier {
   }
 
   Future<void> refreshCasesFromServer() async {
+    if (!_isAuthenticated) {
+      final hadData = _cases.isNotEmpty || _casesError != null || _isLoadingCases;
+      _resetCasesState();
+      if (hadData) {
+        notifyListeners();
+      }
+      return;
+    }
+
+    if (_isLoadingCases) {
+      return;
+    }
+
+    _isLoadingCases = true;
+    _casesError = null;
+    notifyListeners();
+
     try {
       final result = await _api.getCases(limit: 100, offset: 0);
       _cases
         ..clear()
         ..addAll(result.items.map(_mapServerCaseToModel));
-      notifyListeners();
+      _casesError = null;
     } catch (e) {
-      // If fetch fails, keep current state; no demo data
+      _casesError = e.toString();
+    } finally {
+      _isLoadingCases = false;
+      notifyListeners();
     }
   }
 

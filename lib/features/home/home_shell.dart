@@ -518,7 +518,22 @@ class _CasesViewState extends State<CasesView> {
 
   @override
   Widget build(BuildContext context) {
-    final cases = context.watch<AppState>().cases;
+    final appState = context.watch<AppState>();
+    final cases = appState.cases;
+    final bool isLoading = appState.isLoadingCases;
+    final String? loadError = appState.casesError;
+
+    if (isLoading && cases.isEmpty) {
+      return const _CasesLoadingState();
+    }
+
+    if (!isLoading && loadError != null && loadError.isNotEmpty && cases.isEmpty) {
+      return _CasesErrorState(
+        message: loadError,
+        onRetry: () => context.read<AppState>().refreshCasesFromServer(),
+      );
+    }
+
     final query = _searchController.text.toLowerCase();
     final filtered = cases.where((caseModel) {
       final matchesStatus =
@@ -611,6 +626,11 @@ class _CasesViewState extends State<CasesView> {
           ),
         ),
         const SizedBox(height: 16),
+        if (isLoading && cases.isNotEmpty)
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16),
+            child: LinearProgressIndicator(minHeight: 2),
+          ),
         Expanded(
           child: filtered.isEmpty
               ? const _EmptyState(
@@ -710,6 +730,175 @@ class _CaseFilterButton extends StatelessWidget {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _CasesLoadingState extends StatefulWidget {
+  const _CasesLoadingState();
+
+  @override
+  State<_CasesLoadingState> createState() => _CasesLoadingStateState();
+}
+
+class _CasesLoadingStateState extends State<_CasesLoadingState>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _pulse;
+  late final Animation<double> _fade;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1400),
+    )..repeat(reverse: true);
+    final curve = CurvedAnimation(parent: _controller, curve: Curves.easeInOut);
+    _pulse = Tween<double>(begin: 0.94, end: 1.04).animate(curve);
+    _fade = Tween<double>(begin: 0.45, end: 1.0).animate(curve);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ScaleTransition(
+            scale: _pulse,
+            child: Container(
+              width: 96,
+              height: 96,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(
+                  colors: [
+                    fadeColor(AppColors.primary, 0.16),
+                    fadeColor(AppColors.primary, 0.04),
+                  ],
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: fadeColor(AppColors.primary, 0.12),
+                    blurRadius: 28,
+                    offset: const Offset(0, 12),
+                  ),
+                ],
+              ),
+              padding: const EdgeInsets.all(18),
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.white,
+                  boxShadow: [
+                    BoxShadow(
+                      color: fadeColor(AppColors.textPrimary, 0.06),
+                      blurRadius: 12,
+                    ),
+                  ],
+                ),
+                child: const Center(
+                  child: SizedBox(
+                    height: 26,
+                    width: 26,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 3,
+                      valueColor:
+                          AlwaysStoppedAnimation<Color>(AppColors.primary),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 22),
+          Text(
+            'Syncing your cases',
+            style: theme.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w700,
+              color: AppColors.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 8),
+          FadeTransition(
+            opacity: _fade,
+            child: Text(
+              'Fetching the latest updates for you…',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: fadeColor(AppColors.textPrimary, 0.6),
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CasesErrorState extends StatelessWidget {
+  const _CasesErrorState({
+    required this.message,
+    required this.onRetry,
+  });
+
+  final String message;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: fadeColor(AppColors.danger, 0.08),
+              borderRadius: BorderRadius.circular(24),
+            ),
+            child: Column(
+              children: [
+                Icon(Icons.cloud_off_rounded, color: AppColors.danger.withOpacity(0.9), size: 36),
+                const SizedBox(height: 16),
+                Text(
+                  'We couldn\'t refresh your cases',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textPrimary,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  message,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: fadeColor(AppColors.textPrimary, 0.7),
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 18),
+                OutlinedButton.icon(
+                  onPressed: onRetry,
+                  icon: const Icon(Icons.refresh_rounded),
+                  label: const Text('Try again'),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

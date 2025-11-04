@@ -1,27 +1,7 @@
-String formatRelativeTime(DateTime dateTime) {
-  final difference = DateTime.now().difference(dateTime);
-  if (difference.inMinutes < 1) return 'just now';
-  if (difference.inMinutes < 60) return '${difference.inMinutes}m ago';
-  if (difference.inHours < 24) return '${difference.inHours}h ago';
-  if (difference.inDays < 7) return '${difference.inDays}d ago';
-  return formatMediumDate(dateTime);
-}
+import 'package:claimy/core/localization/app_localizations.dart';
 
-String formatMediumDate(DateTime dateTime) {
-  const months = [
-    'Jan',
-    'Feb',
-    'Mar',
-    'Apr',
-    'May',
-    'Jun',
-    'Jul',
-    'Aug',
-    'Sep',
-    'Oct',
-    'Nov',
-    'Dec',
-  ];
-  final month = months[dateTime.month - 1];
-  return '$month ${dateTime.day}, ${dateTime.year}';
-}
+String formatRelativeTime(DateTime dateTime, AppLocalizations l10n) =>
+    l10n.formatRelativeTime(dateTime);
+
+String formatMediumDate(DateTime dateTime, AppLocalizations l10n) =>
+    l10n.formatMediumDate(dateTime);

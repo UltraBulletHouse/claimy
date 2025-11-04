@@ -6,6 +6,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 import 'package:claimy/core/api/complaints_api.dart';
+import 'package:claimy/core/localization/app_localizations.dart';
 import 'package:claimy/core/theme/app_colors.dart';
 import 'package:claimy/services/auth_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -13,18 +14,18 @@ import 'package:shared_preferences/shared_preferences.dart';
 enum CaseStatus { pending, inReview, needsInfo, approved, rejected }
 
 extension CaseStatusX on CaseStatus {
-  String get label {
+  String label(AppLocalizations l10n) {
     switch (this) {
       case CaseStatus.pending:
-        return 'Pending';
+        return l10n.statusPending;
       case CaseStatus.inReview:
-        return 'In review';
+        return l10n.statusInReview;
       case CaseStatus.needsInfo:
-        return 'Need info';
+        return l10n.statusNeedsInfo;
       case CaseStatus.approved:
-        return 'Approved';
+        return l10n.statusApproved;
       case CaseStatus.rejected:
-        return 'Declined';
+        return l10n.statusRejected;
     }
   }
 
@@ -184,8 +185,10 @@ class AppState extends ChangeNotifier {
   static const Duration _cacheStaleAfter = Duration(minutes: 5);
   static const String _casesCacheKeyPrefix = 'app_state.cases';
   static const String _storesCacheKeyPrefix = 'app_state.stores';
+  static const String _localeStorageKey = 'app_state.locale';
 
   AppState() {
+    unawaited(_loadLocale());
     _authService = AuthService();
     _api = ComplaintsApi();
     _authSub = _authService.authStateChanges().listen((user) {
@@ -219,6 +222,7 @@ class AppState extends ChangeNotifier {
   late final ComplaintsApi _api;
   StreamSubscription? _authSub;
   User? _currentUser;
+  Locale _locale = const Locale('en');
 
   final List<CaseModel> _cases = [];
   final List<Voucher> _vouchers = [];
@@ -234,6 +238,7 @@ class AppState extends ChangeNotifier {
 
   bool get isAuthenticated => _isAuthenticated;
   HomeLanding get landingPreference => _landingPreference;
+  Locale get locale => _locale;
 
   List<CaseModel> get cases {
     final sorted = [..._cases];
@@ -303,6 +308,19 @@ class AppState extends ChangeNotifier {
       caseModel.hasUnreadUpdates = false;
       notifyListeners();
     }
+  }
+
+  void setLocale(Locale locale) {
+    if (_locale.languageCode == locale.languageCode) {
+      return;
+    }
+    _locale = locale;
+    notifyListeners();
+    SharedPreferences.getInstance().then((prefs) {
+      prefs.setString(_localeStorageKey, locale.languageCode);
+    }).catchError((_) {
+      // ignore persistence errors
+    });
   }
 
   Future<void> signInWithGoogle() async {
@@ -473,6 +491,19 @@ class AppState extends ChangeNotifier {
       );
     } catch (_) {
       // Ignore caching errors; fresh data will still be shown.
+    }
+  }
+
+  Future<void> _loadLocale() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final stored = prefs.getString(_localeStorageKey);
+      if (stored != null && stored.isNotEmpty && stored != _locale.languageCode) {
+        _locale = Locale(stored);
+        notifyListeners();
+      }
+    } catch (_) {
+      // Ignore locale restore failures; defaults will apply.
     }
   }
 

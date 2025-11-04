@@ -5,8 +5,8 @@ import 'package:flutter/services.dart';
 import 'dart:typed_data';
 import 'package:image_picker/image_picker.dart';
 
+import 'package:claimy/core/localization/localization_extensions.dart';
 import 'package:claimy/core/theme/app_colors.dart';
-import 'package:claimy/core/utils/formatters.dart';
 import 'package:claimy/core/utils/string_utils.dart';
 import 'package:claimy/features/new_case/new_case_screen.dart';
 import 'package:claimy/state/app_state.dart';
@@ -18,7 +18,7 @@ class HomeShell extends StatefulWidget {
   State<HomeShell> createState() => _HomeShellState();
 }
 
-enum _MainMenuAction { signOut }
+enum _MainMenuAction { signOut, languageEnglish, languagePolish }
 
 class _HomeShellState extends State<HomeShell> {
   late HomeLanding _currentView;
@@ -38,8 +38,8 @@ class _HomeShellState extends State<HomeShell> {
     );
     if (created == true && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Claim submitted. We\'ll keep you posted!'),
+        SnackBar(
+          content: Text(context.l10n.claimSubmitted),
         ),
       );
     }
@@ -51,6 +51,7 @@ class _HomeShellState extends State<HomeShell> {
     final bool showRewards = _currentView == HomeLanding.rewards;
     final unread = appState.cases.where((c) => c.hasUnreadUpdates).length;
     final firstName = appState.greetingName;
+    final locale = appState.locale;
 
     return Scaffold(
       extendBody: true,
@@ -115,22 +116,31 @@ class _HomeShellState extends State<HomeShell> {
                           final unreadCount = appState.cases
                               .where((c) => c.hasUnreadUpdates)
                               .length;
+                          final message =
+                              context.l10n.homeUnreadCases(unreadCount);
                           ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                unreadCount > 0
-                                    ? 'You have $unreadCount case updates waiting.'
-                                    : 'All caught up! No new updates.',
-                              ),
-                            ),
+                            SnackBar(content: Text(message)),
                           );
                         },
                         onMenuSelected: (action) {
-                          if (action == _MainMenuAction.signOut) {
-                            context.read<AppState>().signOut();
+                          switch (action) {
+                            case _MainMenuAction.signOut:
+                              context.read<AppState>().signOut();
+                              break;
+                            case _MainMenuAction.languageEnglish:
+                              context
+                                  .read<AppState>()
+                                  .setLocale(const Locale('en'));
+                              break;
+                            case _MainMenuAction.languagePolish:
+                              context
+                                  .read<AppState>()
+                                  .setLocale(const Locale('pl'));
+                              break;
                           }
                         },
                         showRewards: showRewards,
+                        locale: locale,
                       ),
                       const SizedBox(height: 24),
                       Expanded(
@@ -229,7 +239,7 @@ class _NewClaimButton extends StatelessWidget {
                 ),
                 const SizedBox(width: 10),
                 Text(
-                  'New claim',
+                  context.l10n.newClaim,
                   style: theme.textTheme.titleMedium?.copyWith(
                     color: Colors.white,
                     fontWeight: FontWeight.w700,
@@ -254,6 +264,7 @@ class _HomeHeader extends StatelessWidget {
     required this.onNotificationsTap,
     required this.onMenuSelected,
     required this.showRewards,
+    required this.locale,
   });
 
   final String firstName;
@@ -263,6 +274,7 @@ class _HomeHeader extends StatelessWidget {
   final VoidCallback onNotificationsTap;
   final ValueChanged<_MainMenuAction> onMenuSelected;
   final bool showRewards;
+  final Locale locale;
 
   @override
   Widget build(BuildContext context) {
@@ -279,7 +291,7 @@ class _HomeHeader extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Hey, $firstName',
+                    context.l10n.homeGreeting(firstName),
                     style: textTheme.titleMedium?.copyWith(
                       color: fadeColor(AppColors.textPrimary, 0.7),
                     ),
@@ -298,12 +310,50 @@ class _HomeHeader extends StatelessWidget {
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(16),
               ),
-              itemBuilder: (context) => const [
-                PopupMenuItem(
-                  value: _MainMenuAction.signOut,
-                  child: Text('Sign out'),
-                ),
-              ],
+              itemBuilder: (context) {
+                final languageCode = locale.languageCode;
+                return [
+                  PopupMenuItem<_MainMenuAction>(
+                    value: _MainMenuAction.languageEnglish,
+                    child: Row(
+                      children: [
+                        if (languageCode == 'en')
+                          const Icon(
+                            Icons.check_rounded,
+                            size: 18,
+                            color: AppColors.primary,
+                          )
+                        else
+                          const SizedBox(width: 18, height: 18),
+                        const SizedBox(width: 8),
+                        Text(context.l10n.languageEnglish),
+                      ],
+                    ),
+                  ),
+                  PopupMenuItem<_MainMenuAction>(
+                    value: _MainMenuAction.languagePolish,
+                    child: Row(
+                      children: [
+                        if (languageCode == 'pl')
+                          const Icon(
+                            Icons.check_rounded,
+                            size: 18,
+                            color: AppColors.primary,
+                          )
+                        else
+                          const SizedBox(width: 18, height: 18),
+                        const SizedBox(width: 8),
+                        Text(context.l10n.languagePolish),
+                      ],
+                    ),
+                  ),
+                  const PopupMenuDivider(),
+                  PopupMenuItem<_MainMenuAction>(
+                    value: _MainMenuAction.signOut,
+                    child: Text(context.l10n.signOut),
+                  ),
+                ];
+              },
               icon: const Icon(Icons.more_vert_rounded, color: Colors.white),
               color: Colors.white,
             ),
@@ -396,14 +446,14 @@ class _HomeViewToggle extends StatelessWidget {
       child: Row(
         children: [
           _ToggleChip(
-            label: 'My cases',
+            label: context.l10n.tabCases,
             selected: currentView == HomeLanding.cases,
             onTap: () => onViewChanged(HomeLanding.cases),
             textTheme: textTheme,
           ),
           const SizedBox(width: 8),
           _ToggleChip(
-            label: 'My rewards',
+            label: context.l10n.tabRewards,
             selected: currentView == HomeLanding.rewards,
             onTap: () => onViewChanged(HomeLanding.rewards),
             textTheme: textTheme,
@@ -537,7 +587,7 @@ class _CasesViewState extends State<CasesView> {
 
     final filterConfigs = <_FilterConfig>[
       _FilterConfig(
-        label: 'All cases',
+        label: context.l10n.filterAllCases,
         icon: Icons.filter_list_rounded,
         accent: AppColors.primary,
         selected: _statusFilter == null,
@@ -545,7 +595,7 @@ class _CasesViewState extends State<CasesView> {
       ),
       ...CaseStatus.values.map(
         (status) => _FilterConfig(
-          label: status.label,
+          label: status.label(context.l10n),
           icon: status.icon,
           accent: status.color,
           selected: _statusFilter == status,
@@ -562,7 +612,7 @@ class _CasesViewState extends State<CasesView> {
           child: TextField(
             controller: _searchController,
             decoration: InputDecoration(
-              hintText: 'Search store or product',
+              hintText: context.l10n.casesSearchHint,
               prefixIcon: const Icon(Icons.search_rounded),
               filled: true,
               fillColor: Colors.white,
@@ -623,10 +673,9 @@ class _CasesViewState extends State<CasesView> {
           ),
         Expanded(
           child: filtered.isEmpty
-              ? const _EmptyState(
-                  title: 'No cases found',
-                  subtitle:
-                      'Try adjusting your filters or creating a new claim.',
+              ? _EmptyState(
+                  title: context.l10n.casesEmptyTitle,
+                  subtitle: context.l10n.casesEmptyBody,
                 )
               : ListView.separated(
                   padding: const EdgeInsets.symmetric(
@@ -812,7 +861,7 @@ class _CasesLoadingStateState extends State<_CasesLoadingState>
           ),
           const SizedBox(height: 22),
           Text(
-            'Syncing your cases',
+            context.l10n.caseSyncTitle,
             style: theme.textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.w700,
               color: AppColors.textPrimary,
@@ -822,7 +871,7 @@ class _CasesLoadingStateState extends State<_CasesLoadingState>
           FadeTransition(
             opacity: _fade,
             child: Text(
-              'Fetching the latest updates for you…',
+              context.l10n.caseSyncBody,
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: fadeColor(AppColors.textPrimary, 0.6),
               ),
@@ -864,7 +913,7 @@ class _CasesErrorState extends StatelessWidget {
                 Icon(Icons.cloud_off_rounded, color: AppColors.danger.withOpacity(0.9), size: 36),
                 const SizedBox(height: 16),
                 Text(
-                  'We couldn\'t refresh your cases',
+                  context.l10n.caseSyncErrorTitle,
                   style: theme.textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.w700,
                     color: AppColors.textPrimary,
@@ -883,7 +932,7 @@ class _CasesErrorState extends StatelessWidget {
                 OutlinedButton.icon(
                   onPressed: onRetry,
                   icon: const Icon(Icons.refresh_rounded),
-                  label: const Text('Try again'),
+                  label: Text(context.l10n.tryAgain),
                 ),
               ],
             ),
@@ -943,7 +992,7 @@ class RewardsView extends StatelessWidget {
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    'Use your vouchers instantly while shopping in-store or online.',
+                    context.l10n.rewardsIntro,
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: fadeColor(AppColors.textPrimary, 0.7),
                     ),
@@ -956,10 +1005,9 @@ class RewardsView extends StatelessWidget {
         const SizedBox(height: 16),
         Expanded(
           child: vouchers.isEmpty
-              ? const _EmptyState(
-                  title: 'No active rewards yet',
-                  subtitle:
-                      'Submit claims to unlock vouchers and cashback offers.',
+              ? _EmptyState(
+                  title: context.l10n.rewardsEmptyTitle,
+                  subtitle: context.l10n.rewardsEmptyBody,
                 )
               : ListView.builder(
                   padding: const EdgeInsets.symmetric(
@@ -1095,7 +1143,7 @@ class CaseCard extends StatelessWidget {
                 ),
                 const SizedBox(width: 6),
                 Text(
-                  'Updated ${formatRelativeTime(caseModel.lastUpdated)}',
+                  context.l10n.caseUpdated(caseModel.lastUpdated),
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: fadeColor(AppColors.textPrimary, 0.6),
                       ),
@@ -1112,16 +1160,16 @@ class CaseCard extends StatelessWidget {
                       borderRadius: BorderRadius.circular(16),
                     ),
                     child: Row(
-                      children: const [
-                        Icon(
+                      children: [
+                        const Icon(
                           Icons.bolt_rounded,
                           size: 16,
                           color: AppColors.accent,
                         ),
-                        SizedBox(width: 4),
+                        const SizedBox(width: 4),
                         Text(
-                          'New update',
-                          style: TextStyle(
+                          context.l10n.caseNewUpdate,
+                          style: const TextStyle(
                             color: AppColors.accent,
                             fontWeight: FontWeight.w600,
                           ),
@@ -1152,7 +1200,7 @@ class CaseCard extends StatelessWidget {
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        'We need one quick detail from you.',
+                        context.l10n.caseNeedsInfo,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                               color: darkenColor(AppColors.warning),
                               fontWeight: FontWeight.w600,
@@ -1193,7 +1241,7 @@ class StatusPill extends StatelessWidget {
           Icon(status.icon, size: 16, color: status.color),
           const SizedBox(width: 6),
           Text(
-            status.label,
+            status.label(context.l10n),
             style: TextStyle(color: status.color, fontWeight: FontWeight.w600),
           ),
         ],
@@ -1224,7 +1272,9 @@ class _CaseDetailScreenState extends State<CaseDetailScreen> {
     context.read<AppState>().respondToAdditionalInfoServer(widget.caseId, response: response);
     ScaffoldMessenger.of(
       context,
-    ).showSnackBar(SnackBar(content: Text('Thanks! We noted "$response".')));
+    ).showSnackBar(
+      SnackBar(content: Text(context.l10n.infoResponseNoted(response))),
+    );
   }
 
   @override
@@ -1234,7 +1284,7 @@ class _CaseDetailScreenState extends State<CaseDetailScreen> {
     );
 
     if (caseModel == null) {
-      return const Scaffold(body: Center(child: Text('Case not found')));
+      return Scaffold(body: Center(child: Text(context.l10n.caseNotFound)));
     }
 
     return Scaffold(
@@ -1307,7 +1357,7 @@ class _CaseDetailScreenState extends State<CaseDetailScreen> {
                                   ),
                             ),
                             Text(
-                              'Created ${formatMediumDate(caseModel.createdAt)}',
+                              context.l10n.caseCreated(caseModel.createdAt),
                               style: Theme.of(context).textTheme.bodySmall
                                   ?.copyWith(
                                     color: fadeColor(
@@ -1339,7 +1389,7 @@ class _CaseDetailScreenState extends State<CaseDetailScreen> {
                         const SizedBox(width: 12),
                         Expanded(
                           child: Text(
-                            'Last update ${formatRelativeTime(caseModel.lastUpdated)}',
+                            context.l10n.caseLastUpdate(caseModel.lastUpdated),
                             style: Theme.of(context).textTheme.bodyMedium
                                 ?.copyWith(
                                   color: fadeColor(AppColors.textPrimary, 0.7),
@@ -1378,7 +1428,7 @@ class _CaseDetailScreenState extends State<CaseDetailScreen> {
             ),
           const SizedBox(height: 16),
           Text(
-            'Status history',
+            context.l10n.statusHistory,
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.w700,
               color: AppColors.textPrimary,
@@ -1411,15 +1461,15 @@ class _CaseDetailScreenState extends State<CaseDetailScreen> {
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
-                        children: const [
+                        children: [
                           Text(
-                            'Receipt image',
-                            style: TextStyle(fontWeight: FontWeight.w700),
+                            context.l10n.receiptImage,
+                            style: const TextStyle(fontWeight: FontWeight.w700),
                           ),
-                          SizedBox(height: 6),
+                          const SizedBox(height: 6),
                           Text(
-                            'Open or copy the receipt image link if needed.',
-                            style: TextStyle(color: Colors.black54),
+                            context.l10n.receiptHelp,
+                            style: const TextStyle(color: Colors.black54),
                           ),
                         ],
                       ),
@@ -1436,27 +1486,27 @@ class _CaseDetailScreenState extends State<CaseDetailScreen> {
                               mode: LaunchMode.externalApplication,
                             )) {
                               ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text('Could not open: $url')),
+                                SnackBar(
+                                  content: Text(context.l10n.couldNotOpen(url)),
+                                ),
                               );
                             }
                           },
                           icon: const Icon(Icons.open_in_new_rounded),
-                          label: const Text('Open'),
+                          label: Text(context.l10n.open),
                         ),
                         OutlinedButton.icon(
                           onPressed: () async {
                             final url = caseModel.receiptImageUrl!;
                             await Clipboard.setData(ClipboardData(text: url));
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                  'Receipt link copied to clipboard',
-                                ),
+                              SnackBar(
+                                content: Text(context.l10n.receiptLinkCopied),
                               ),
                             );
                           },
                           icon: const Icon(Icons.copy_rounded),
-                          label: const Text('Copy'),
+                          label: Text(context.l10n.copy),
                         ),
                       ],
                     ),
@@ -1478,6 +1528,9 @@ class TimelineEntry extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final sourceLabel =
+        entry.isCustomerAction ? context.l10n.timelineYou : context.l10n.timelineSupport;
+    final timestampLabel = context.l10n.formatMediumDate(entry.timestamp);
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: Row(
@@ -1529,7 +1582,7 @@ class TimelineEntry extends StatelessWidget {
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    '${entry.isCustomerAction ? 'You' : 'Support'} • ${formatMediumDate(entry.timestamp)}',
+                    '$sourceLabel • $timestampLabel',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: fadeColor(AppColors.textPrimary, 0.6),
                     ),
@@ -1589,7 +1642,7 @@ class _AdditionalInfoCardState extends State<AdditionalInfoCard> {
    } catch (e) {
      if (!mounted) return;
      ScaffoldMessenger.of(context).showSnackBar(
-       SnackBar(content: Text('Could not pick file: $e')),
+       SnackBar(content: Text(context.l10n.filePickFailed(e.toString()))),
      );
    }
  }
@@ -1598,13 +1651,13 @@ class _AdditionalInfoCardState extends State<AdditionalInfoCard> {
    final answer = _controller.text.trim();
    if (answer.isEmpty) {
      ScaffoldMessenger.of(context).showSnackBar(
-       const SnackBar(content: Text('Please provide an answer')),
+       SnackBar(content: Text(context.l10n.answerRequired)),
      );
      return;
    }
    if (widget.requiresFile && _attachmentBytes == null) {
      ScaffoldMessenger.of(context).showSnackBar(
-       const SnackBar(content: Text('Please attach a file as requested')),
+       SnackBar(content: Text(context.l10n.fileRequired)),
      );
      return;
    }
@@ -1613,7 +1666,7 @@ class _AdditionalInfoCardState extends State<AdditionalInfoCard> {
      await Future.sync(() => widget.onSubmit(answer, _attachmentBytes));
      if (!mounted) return;
      ScaffoldMessenger.of(context).showSnackBar(
-       const SnackBar(content: Text('Thanks! We received your info.')),
+       SnackBar(content: Text(context.l10n.infoReceived)),
      );
    } finally {
      if (mounted) setState(() => _submitting = false);
@@ -1657,16 +1710,16 @@ class _AdditionalInfoCardState extends State<AdditionalInfoCard> {
             children: [
               ElevatedButton(
                 onPressed: () => widget.onAnswer('Yes'),
-                child: const Text('Yes'),
+                child: Text(context.l10n.yes),
               ),
               ElevatedButton(
                 onPressed: () => widget.onAnswer('No'),
-                child: const Text('No'),
+                child: Text(context.l10n.no),
               ),
               OutlinedButton.icon(
                 onPressed: () => widget.onAnswer('Uploaded photo'),
                 icon: const Icon(Icons.photo_camera_rounded),
-                label: const Text('Upload photo'),
+                label: Text(context.l10n.uploadPhoto),
               ),
             ],
           ),
@@ -1684,6 +1737,9 @@ class VoucherCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final expiresIn = voucher.expiration.difference(DateTime.now()).inDays;
+    final expiryLabel = expiresIn >= 0
+        ? context.l10n.voucherExpires(expiresIn)
+        : context.l10n.voucherExpired;
     final appState = context.read<AppState>();
 
     return Card(
@@ -1751,9 +1807,7 @@ class VoucherCard extends StatelessWidget {
                 ),
                 const SizedBox(width: 6),
                 Text(
-                  expiresIn >= 0
-                      ? 'Expires in $expiresIn day${expiresIn == 1 ? '' : 's'}'
-                      : 'Expired',
+                  expiryLabel,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: fadeColor(AppColors.textPrimary, 0.6),
                   ),
@@ -1873,7 +1927,7 @@ class _PendingRequestCardState extends State<PendingRequestCard> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Could not pick file: $e')),
+        SnackBar(content: Text(context.l10n.filePickFailed(e.toString()))),
       );
     }
   }
@@ -1882,13 +1936,13 @@ class _PendingRequestCardState extends State<PendingRequestCard> {
     final answer = _controller.text.trim();
     if (answer.isEmpty && _attachmentBytes == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please provide an answer or attach a file')),
+        SnackBar(content: Text(context.l10n.answerOrFileRequired)),
       );
       return;
     }
     if (widget.request.requiresFile && _attachmentBytes == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please attach a file as requested')),
+        SnackBar(content: Text(context.l10n.fileRequired)),
       );
       return;
     }
@@ -1902,7 +1956,7 @@ class _PendingRequestCardState extends State<PendingRequestCard> {
       );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Thanks! We received your info.')),
+        SnackBar(content: Text(context.l10n.infoReceived)),
       );
       setState(() {
         _showForm = false;
@@ -1912,7 +1966,7 @@ class _PendingRequestCardState extends State<PendingRequestCard> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to submit: $e')),
+        SnackBar(content: Text(context.l10n.submitFailed(e.toString()))),
       );
     } finally {
       if (mounted) setState(() => _submitting = false);
@@ -1929,12 +1983,12 @@ class _PendingRequestCardState extends State<PendingRequestCard> {
       );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Thanks! We received your info.')),
+        SnackBar(content: Text(context.l10n.infoReceived)),
       );
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to submit: $e')),
+        SnackBar(content: Text(context.l10n.submitFailed(e.toString()))),
       );
     } finally {
       if (mounted) setState(() => _submitting = false);
@@ -1952,12 +2006,12 @@ class _PendingRequestCardState extends State<PendingRequestCard> {
       );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Thanks! We received your file.')),
+        SnackBar(content: Text(context.l10n.fileReceived)),
       );
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to submit file: $e')),
+        SnackBar(content: Text(context.l10n.fileSubmitFailed(e.toString()))),
       );
     } finally {
       if (mounted) setState(() => _submitting = false);
@@ -2000,7 +2054,7 @@ class _PendingRequestCardState extends State<PendingRequestCard> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Requested ${_formatDate(widget.request.requestedAt)}',
+                      context.l10n.requestedOn(widget.request.requestedAt),
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: fadeColor(AppColors.textPrimary, 0.6),
                       ),
@@ -2017,7 +2071,7 @@ class _PendingRequestCardState extends State<PendingRequestCard> {
                             ),
                             const SizedBox(width: 4),
                             Text(
-                              'File upload required',
+                              context.l10n.fileUploadRequired,
                               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                 color: fadeColor(AppColors.textPrimary, 0.6),
                                 fontWeight: FontWeight.w600,
@@ -2035,7 +2089,7 @@ class _PendingRequestCardState extends State<PendingRequestCard> {
             Padding(
               padding: const EdgeInsets.only(top: 12),
               child: Text(
-                '✓ Response submitted',
+                '✓ ${context.l10n.responseSubmitted}',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: Colors.green,
                   fontWeight: FontWeight.w600,
@@ -2050,14 +2104,18 @@ class _PendingRequestCardState extends State<PendingRequestCard> {
                   Expanded(
                     child: ElevatedButton(
                       onPressed: _submitting ? null : () => _answer('Yes'),
-                      child: _submitting ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)) : const Text('Yes'),
+                      child: _submitting
+                          ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                          : Text(context.l10n.yes),
                     ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: ElevatedButton(
                       onPressed: _submitting ? null : () => _answer('No'),
-                      child: _submitting ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)) : const Text('No'),
+                      child: _submitting
+                          ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                          : Text(context.l10n.no),
                     ),
                   ),
                 ],
@@ -2068,7 +2126,7 @@ class _PendingRequestCardState extends State<PendingRequestCard> {
                 child: OutlinedButton.icon(
                   onPressed: _submitting ? null : _pickAttachment,
                   icon: const Icon(Icons.attach_file),
-                  label: const Text('Attach File'),
+                  label: Text(context.l10n.attachFile),
                 ),
               )
             else if (!_showForm)
@@ -2076,15 +2134,15 @@ class _PendingRequestCardState extends State<PendingRequestCard> {
                 width: double.infinity,
                 child: ElevatedButton(
                   onPressed: () => setState(() => _showForm = true),
-                  child: const Text('Respond'),
+                  child: Text(context.l10n.respond),
                 ),
               )
             else ...[
               TextField(
                 controller: _controller,
-                decoration: const InputDecoration(
-                  hintText: 'Type your answer...',
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  hintText: context.l10n.answerHint,
+                  border: const OutlineInputBorder(),
                 ),
                 maxLines: 1,
               ),
@@ -2100,7 +2158,7 @@ class _PendingRequestCardState extends State<PendingRequestCard> {
                               height: 16,
                               child: CircularProgressIndicator(strokeWidth: 2),
                             )
-                          : const Text('Submit'),
+                          : Text(context.l10n.submit),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -2111,7 +2169,7 @@ class _PendingRequestCardState extends State<PendingRequestCard> {
                         _controller.clear();
                         _attachmentBytes = null;
                       }),
-                      child: const Text('Cancel'),
+                      child: Text(context.l10n.cancel),
                     ),
                   ),
                 ],
@@ -2123,18 +2181,4 @@ class _PendingRequestCardState extends State<PendingRequestCard> {
     );
   }
 
-  String _formatDate(DateTime date) {
-    final now = DateTime.now();
-    final difference = now.difference(date);
-    
-    if (difference.inDays == 0) {
-      return 'today';
-    } else if (difference.inDays == 1) {
-      return 'yesterday';
-    } else if (difference.inDays < 7) {
-      return '${difference.inDays} days ago';
-    } else {
-      return '${date.day}/${date.month}/${date.year}';
-    }
-  }
 }

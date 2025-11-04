@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import 'package:claimy/core/theme/app_colors.dart';
 import 'package:claimy/state/app_state.dart';
+import 'package:claimy/core/localization/localization_extensions.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -31,11 +32,12 @@ class _LoginScreenState extends State<LoginScreen> {
           password: _passwordController.text,
         );
       } catch (e) {
+        final rawMessage = e is Exception
+            ? e.toString().replaceFirst('Exception: ', '')
+            : e.toString();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(
-              'Login failed: ${e is Exception ? e.toString().replaceFirst('Exception: ', '') : e.toString()}',
-            ),
+            content: Text(context.l10n.loginFailed(rawMessage)),
           ),
         );
       }
@@ -128,7 +130,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             _buildLoginForm(context),
                             const SizedBox(height: 32),
                             Text(
-                              'By continuing you agree to Claimy\'s Terms and Privacy Policy.',
+                              context.l10n.termsAndPrivacy,
                               style: textTheme.bodySmall?.copyWith(
                                 color: fadeColor(AppColors.textPrimary, 0.55),
                               ),
@@ -214,7 +216,7 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
             const SizedBox(height: 20),
             Text(
-              'Sign in',
+              context.l10n.loginHeading,
               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                 color: AppColors.textPrimary,
                 fontWeight: FontWeight.w600,
@@ -222,7 +224,7 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
             const SizedBox(height: 8),
             Text(
-              'Enter your details to access your dashboard.',
+              context.l10n.loginSubtitle,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 color: fadeColor(AppColors.textPrimary, 0.6),
               ),
@@ -233,15 +235,15 @@ class _LoginScreenState extends State<LoginScreen> {
               keyboardType: TextInputType.emailAddress,
               textInputAction: TextInputAction.next,
               decoration: _fieldDecoration(
-                label: 'Email',
+                label: context.l10n.emailLabel,
                 icon: Icons.mail_outline_rounded,
               ),
               validator: (value) {
                 if (value == null || value.isEmpty) {
-                  return 'Enter an email';
+                  return context.l10n.emailRequired;
                 }
                 if (!value.contains('@')) {
-                  return 'Enter a valid email';
+                  return context.l10n.emailInvalid;
                 }
                 return null;
               },
@@ -252,15 +254,15 @@ class _LoginScreenState extends State<LoginScreen> {
               obscureText: true,
               textInputAction: TextInputAction.done,
               decoration: _fieldDecoration(
-                label: 'Password',
+                label: context.l10n.passwordLabel,
                 icon: Icons.lock_outline_rounded,
               ),
               validator: (value) {
                 if (value == null || value.isEmpty) {
-                  return 'Enter your password';
+                  return context.l10n.passwordRequired;
                 }
                 if (value.length < 6) {
-                  return 'Use at least 6 characters';
+                  return context.l10n.passwordMin;
                 }
                 return null;
               },
@@ -283,7 +285,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     context,
                   ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
                 ),
-                child: const Text('Forgot password?'),
+              child: Text(context.l10n.forgotPassword),
               ),
             ),
             const SizedBox(height: 12),
@@ -301,14 +303,14 @@ class _LoginScreenState extends State<LoginScreen> {
                   context,
                 ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
               ),
-              child: const Text('Log in'),
+              child: Text(context.l10n.loginButton),
             ),
             const SizedBox(height: 20),
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Text(
-                  'New to Claimy?',
+                  context.l10n.newToClaimy,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: fadeColor(AppColors.textPrimary, 0.7),
                   ),
@@ -326,7 +328,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       fontWeight: FontWeight.w600,
                     ),
                   ),
-                  child: const Text('Create an account'),
+                  child: Text(context.l10n.createAccountCta),
                 ),
               ],
             ),
@@ -362,7 +364,7 @@ class _BrandHeader extends StatelessWidget {
         ),
         const SizedBox(height: 28),
         Text(
-          'Sign in to continue managing your claims and rewards.',
+          context.l10n.signInTagline,
           style: supportingStyle,
         ),
       ],
@@ -435,9 +437,14 @@ class _SignUpScreenState extends State<SignUpScreen> {
         if (!mounted) return;
         Navigator.of(context).pop();
       } catch (e) {
+        final message = e is Exception
+            ? e.toString().replaceFirst('Exception: ', '')
+            : e.toString();
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('Sign up failed: $e')));
+        ).showSnackBar(
+          SnackBar(content: Text(context.l10n.signUpFailed(message))),
+        );
       }
     }
   }
@@ -445,7 +452,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Create account')),
+      appBar: AppBar(title: Text(context.l10n.createAccountTitle)),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
@@ -456,7 +463,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
               children: [
                 const SizedBox(height: 12),
                 Text(
-                  'Let’s get you started',
+                  context.l10n.signUpHeading,
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                     fontWeight: FontWeight.w700,
                     color: AppColors.textPrimary,
@@ -465,15 +472,15 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 const SizedBox(height: 24),
                 TextFormField(
                   controller: _nameController,
-                  decoration: const InputDecoration(
-                    labelText: 'Full name',
-                    border: OutlineInputBorder(
+                  decoration: InputDecoration(
+                    labelText: context.l10n.fullNameLabel,
+                    border: const OutlineInputBorder(
                       borderRadius: BorderRadius.all(Radius.circular(16)),
                     ),
                   ),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
-                      return 'Enter your name';
+                      return context.l10n.nameRequired;
                     }
                     return null;
                   },
@@ -482,18 +489,18 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 TextFormField(
                   controller: _emailController,
                   keyboardType: TextInputType.emailAddress,
-                  decoration: const InputDecoration(
-                    labelText: 'Email',
-                    border: OutlineInputBorder(
+                  decoration: InputDecoration(
+                    labelText: context.l10n.emailLabel,
+                    border: const OutlineInputBorder(
                       borderRadius: BorderRadius.all(Radius.circular(16)),
                     ),
                   ),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
-                      return 'Enter an email';
+                      return context.l10n.emailRequired;
                     }
                     if (!value.contains('@')) {
-                      return 'Enter a valid email';
+                      return context.l10n.emailInvalid;
                     }
                     return null;
                   },
@@ -502,19 +509,19 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 TextFormField(
                   controller: _passwordController,
                   obscureText: true,
-                  decoration: const InputDecoration(
-                    labelText: 'Password',
-                    border: OutlineInputBorder(
+                  decoration: InputDecoration(
+                    labelText: context.l10n.passwordLabel,
+                    border: const OutlineInputBorder(
                       borderRadius: BorderRadius.all(Radius.circular(16)),
                     ),
-                    helperText: 'Use at least 8 characters',
+                    helperText: context.l10n.passwordHelper,
                   ),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
-                      return 'Create a password';
+                      return context.l10n.passwordCreateRequired;
                     }
                     if (value.length < 8) {
-                      return 'Use at least 8 characters';
+                      return context.l10n.passwordHelper;
                     }
                     return null;
                   },
@@ -522,11 +529,11 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 const SizedBox(height: 32),
                 ElevatedButton(
                   onPressed: _submit,
-                  child: const Text('Sign up'),
+                  child: Text(context.l10n.signUpButton),
                 ),
                 const SizedBox(height: 12),
                 Text(
-                  'Already have an account?',
+                  context.l10n.alreadyHaveAccount,
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: fadeColor(AppColors.textPrimary, 0.7),
@@ -534,7 +541,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 ),
                 TextButton(
                   onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('Back to login'),
+                  child: Text(context.l10n.backToLogin),
                 ),
               ],
             ),
@@ -565,7 +572,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     final email = _emailController.text.trim();
     if (email.isEmpty || !email.contains('@')) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Enter a valid email to continue')),
+        SnackBar(content: Text(context.l10n.enterValidEmail)),
       );
       return;
     }
@@ -574,21 +581,23 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Check $email for a link to reset your password.'),
+          content: Text(context.l10n.resetLinkSent(email)),
         ),
       );
       Navigator.of(context).pop();
     } catch (e) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('Failed to send reset email: $e')));
+      ).showSnackBar(
+        SnackBar(content: Text(context.l10n.resetEmailFailed(e.toString()))),
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Reset password')),
+      appBar: AppBar(title: Text(context.l10n.resetPasswordTitle)),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(24),
@@ -597,7 +606,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             children: [
               const SizedBox(height: 12),
               Text(
-                'We\'ll email you a reset link.',
+                context.l10n.resetPasswordDescription,
                 style: Theme.of(
                   context,
                 ).textTheme.bodyLarge?.copyWith(color: AppColors.textPrimary),
@@ -605,9 +614,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               const SizedBox(height: 24),
               TextField(
                 controller: _emailController,
-                decoration: const InputDecoration(
-                  labelText: 'Email',
-                  border: OutlineInputBorder(
+                decoration: InputDecoration(
+                  labelText: context.l10n.emailLabel,
+                  border: const OutlineInputBorder(
                     borderRadius: BorderRadius.all(Radius.circular(16)),
                   ),
                 ),
@@ -615,7 +624,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               const SizedBox(height: 24),
               ElevatedButton(
                 onPressed: _submit,
-                child: const Text('Send reset link'),
+                child: Text(context.l10n.sendResetLink),
               ),
             ],
           ),

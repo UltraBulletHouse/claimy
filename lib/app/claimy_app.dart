@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
 
+import 'package:claimy/core/localization/app_localizations.dart';
 import 'package:claimy/core/theme/app_colors.dart';
 import 'package:claimy/features/auth/auth_screens.dart';
 import 'package:claimy/features/home/home_shell.dart';
@@ -11,9 +13,18 @@ class ClaimyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final locale = context.watch<AppState>().locale;
     return MaterialApp(
-      title: 'Claimy',
+      onGenerateTitle: (context) => AppLocalizations.of(context).appTitle,
       debugShowCheckedModeBanner: false,
+      localizationsDelegates: const [
+        AppLocalizations.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: AppLocalizations.supportedLocales,
+      locale: locale,
       theme: ThemeData(
         useMaterial3: true,
         colorScheme: ColorScheme.fromSeed(

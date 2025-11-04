@@ -8,6 +8,7 @@ import 'package:file_picker/file_picker.dart';
 
 import 'package:claimy/core/theme/app_colors.dart';
 import 'package:claimy/state/app_state.dart';
+import 'package:claimy/core/localization/localization_extensions.dart';
 
 class NewCaseScreen extends StatefulWidget {
   const NewCaseScreen({super.key});
@@ -133,7 +134,7 @@ class _NewCaseScreenState extends State<NewCaseScreen> {
     if (nextError != null &&
         nextError.isNotEmpty &&
         nextError != previousError) {
-      _showMessage('Failed to load stores: $nextError');
+      _showMessage(context.l10n.storeLoadFailed(nextError ?? ''));
     }
   }
 
@@ -163,17 +164,17 @@ class _NewCaseScreenState extends State<NewCaseScreen> {
             _selectedStoreId != null &&
             (_selectedStoreName?.isNotEmpty ?? false);
         if (!hasSelection) {
-          _showMessage('Select a store to continue.');
+          _showMessage(context.l10n.selectStore);
           return false;
         }
         if (_productController.text.trim().isEmpty) {
-          _showMessage('Tell us the product name.');
+          _showMessage(context.l10n.productNamePrompt);
           return false;
         }
         return true;
       case 1:
         if (!_productPhotoAdded || !_receiptPhotoAdded) {
-          _showMessage('Please add both photos before continuing.');
+          _showMessage(context.l10n.addPhotosPrompt);
           return false;
         }
         return true;
@@ -207,7 +208,7 @@ class _NewCaseScreenState extends State<NewCaseScreen> {
       }
       final store = _selectedStoreName ?? '';
       if (store.isEmpty) {
-        _showMessage('Select a store to continue.');
+        _showMessage(context.l10n.selectStore);
         return;
       }
       final product = _productController.text.trim();
@@ -232,7 +233,9 @@ class _NewCaseScreenState extends State<NewCaseScreen> {
         if (!mounted) return;
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('Image upload failed: $e')));
+        ).showSnackBar(
+          SnackBar(content: Text(context.l10n.imageUploadFailed(e.toString()))),
+        );
         return;
       } finally {
         if (mounted) setState(() => _uploading = false);
@@ -262,20 +265,22 @@ class _NewCaseScreenState extends State<NewCaseScreen> {
           );
           if (!mounted) return;
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Claim submitted successfully.')),
+            SnackBar(content: Text(context.l10n.claimSubmittedSuccess)),
           );
           Navigator.of(context).pop(true);
         } else {
           if (!mounted) return;
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(result.message ?? 'Submission failed.')),
+            SnackBar(content: Text(result.message ?? context.l10n.submissionFailed)),
           );
         }
       } catch (e) {
         if (!mounted) return;
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('Failed to submit: $e')));
+        ).showSnackBar(
+          SnackBar(content: Text(context.l10n.submitFailed(e.toString()))),
+        );
       }
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
@@ -285,7 +290,7 @@ class _NewCaseScreenState extends State<NewCaseScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('New claim')),
+      appBar: AppBar(title: Text(context.l10n.newClaim)),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(24),
@@ -318,7 +323,7 @@ class _NewCaseScreenState extends State<NewCaseScreen> {
                 Expanded(
                   child: OutlinedButton(
                     onPressed: _goBack,
-                    child: const Text('Back'),
+                    child: Text(context.l10n.back),
                   ),
                 ),
               if (_currentStep > 0) const SizedBox(width: 12),
@@ -336,8 +341,8 @@ class _NewCaseScreenState extends State<NewCaseScreen> {
                         )
                       : Text(
                           _currentStep == _stepsCount - 1
-                              ? 'Submit claim'
-                              : 'Continue',
+                              ? context.l10n.submitClaim
+                              : context.l10n.continueLabel,
                         ),
                 ),
               ),
@@ -429,7 +434,7 @@ class _StoreStep extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Where did you buy it?',
+          context.l10n.whereBought,
           style: theme.textTheme.titleLarge?.copyWith(
             fontWeight: FontWeight.w700,
             color: AppColors.textPrimary,
@@ -437,7 +442,7 @@ class _StoreStep extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         Text(
-          'Choose the store so we can route your claim to the right team.',
+          context.l10n.storeDescription,
           style: theme.textTheme.bodyMedium?.copyWith(
             color: fadeColor(AppColors.textPrimary, 0.7),
           ),
@@ -457,7 +462,7 @@ class _StoreStep extends StatelessWidget {
               borderRadius: BorderRadius.circular(12),
             ),
             child: Text(
-              'No stores are configured yet. Ask support to configure store options.',
+              context.l10n.noStoresConfigured,
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: fadeColor(AppColors.textPrimary, 0.8),
               ),
@@ -477,7 +482,7 @@ class _StoreStep extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'We couldn\'t refresh the store list. Please retry or try again shortly.',
+                  context.l10n.storeRefreshError,
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: AppColors.textPrimary,
                   ),
@@ -487,7 +492,7 @@ class _StoreStep extends StatelessWidget {
                   alignment: Alignment.centerLeft,
                   child: OutlinedButton(
                     onPressed: onRetry,
-                    child: const Text('Retry'),
+                    child: Text(context.l10n.retry),
                   ),
                 ),
               ],
@@ -515,7 +520,7 @@ class _StoreStep extends StatelessWidget {
         ),
         const SizedBox(height: 32),
         Text(
-          'What did you buy?',
+          context.l10n.whatBought,
           style: theme.textTheme.titleMedium?.copyWith(
             fontWeight: FontWeight.w700,
             color: AppColors.textPrimary,
@@ -523,7 +528,7 @@ class _StoreStep extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         Text(
-          'Be specific so the store can identify the product quickly.',
+          context.l10n.productDescription,
           style: theme.textTheme.bodyMedium?.copyWith(
             color: fadeColor(AppColors.textPrimary, 0.7),
           ),
@@ -531,10 +536,10 @@ class _StoreStep extends StatelessWidget {
         const SizedBox(height: 24),
         TextField(
           controller: productController,
-          decoration: const InputDecoration(
-            labelText: 'Product name',
-            hintText: 'e.g. Organic almond milk 1L',
-            border: OutlineInputBorder(
+          decoration: InputDecoration(
+            labelText: context.l10n.productName,
+            hintText: context.l10n.productHint,
+            border: const OutlineInputBorder(
               borderRadius: BorderRadius.all(Radius.circular(16)),
             ),
           ),
@@ -678,7 +683,7 @@ class _DetailsStep extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Describe what happened',
+          context.l10n.describeWhatHappened,
           style: Theme.of(context).textTheme.titleLarge?.copyWith(
             fontWeight: FontWeight.w700,
             color: AppColors.textPrimary,
@@ -686,7 +691,7 @@ class _DetailsStep extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         Text(
-          'Let us know what went wrong. Keep it short and friendly.',
+          context.l10n.descriptionSubtitle,
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
             color: fadeColor(AppColors.textPrimary, 0.7),
           ),
@@ -696,17 +701,17 @@ class _DetailsStep extends StatelessWidget {
           controller: descriptionController,
           keyboardType: TextInputType.multiline,
           maxLines: 5,
-          decoration: const InputDecoration(
-            labelText: 'Describe the issue (optional)',
-            hintText: 'Tell us what went wrong so we can fix it.',
-            border: OutlineInputBorder(
+          decoration: InputDecoration(
+            labelText: context.l10n.descriptionLabel,
+            hintText: context.l10n.descriptionHint,
+            border: const OutlineInputBorder(
               borderRadius: BorderRadius.all(Radius.circular(16)),
             ),
           ),
         ),
         const SizedBox(height: 32),
         Text(
-          'Add your photos',
+          context.l10n.photosTitle,
           style: Theme.of(context).textTheme.titleMedium?.copyWith(
             fontWeight: FontWeight.w700,
             color: AppColors.textPrimary,
@@ -714,7 +719,7 @@ class _DetailsStep extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         Text(
-          'Upload a product photo and the receipt so we can verify your claim.',
+          context.l10n.photosDescription,
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
             color: fadeColor(AppColors.textPrimary, 0.7),
           ),
@@ -724,7 +729,7 @@ class _DetailsStep extends StatelessWidget {
           children: [
             Expanded(
               child: _PhotoBox(
-                label: 'Product photo',
+                label: context.l10n.productPhoto,
                 added: productPhotoAdded,
                 previewDataUrl: productPreviewDataUrl,
                 onSelected: onPickProduct,
@@ -733,7 +738,7 @@ class _DetailsStep extends StatelessWidget {
             const SizedBox(width: 16),
             Expanded(
               child: _PhotoBox(
-                label: 'Receipt photo',
+                label: context.l10n.receiptPhoto,
                 added: receiptPhotoAdded,
                 previewDataUrl: receiptPreviewDataUrl,
                 onSelected: onPickReceipt,
@@ -784,18 +789,14 @@ class _PhotoBox extends StatelessWidget {
       final file = res.files.first;
       if (!_isValidImage(file.name, file.size)) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Please choose an image under 5 MB (jpg, png, webp).',
-            ),
-          ),
+          SnackBar(content: Text(context.l10n.imageSizeMessage)),
         );
         return;
       }
       final bytes = file.bytes;
       if (bytes == null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Failed to read the selected file.')),
+          SnackBar(content: Text(context.l10n.failedToReadFile)),
         );
         return;
       }
@@ -804,7 +805,9 @@ class _PhotoBox extends StatelessWidget {
     } catch (e) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('Failed to pick file: $e')));
+      ).showSnackBar(
+        SnackBar(content: Text(context.l10n.failedToPickFile(e.toString()))),
+      );
     }
   }
 
@@ -843,7 +846,7 @@ class _PhotoBox extends StatelessWidget {
             ),
             const SizedBox(height: 4),
             Text(
-              added ? 'Photo added' : 'Tap to add',
+              added ? context.l10n.photoAdded : context.l10n.tapToAdd,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 color: fadeColor(AppColors.textPrimary, 0.6),
               ),

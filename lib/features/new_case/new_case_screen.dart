@@ -19,6 +19,8 @@ class NewCaseScreen extends StatefulWidget {
 class _NewCaseScreenState extends State<NewCaseScreen> {
   static const int _stepsCount = 2;
   List<_StoreBrand> _storeBrands = const [];
+  late final AppState _appState;
+  late final VoidCallback _appStateListener;
 
   int _currentStep = 0;
   String? _selectedStoreId;
@@ -41,69 +43,14 @@ class _NewCaseScreenState extends State<NewCaseScreen> {
   @override
   void initState() {
     super.initState();
-    _loadStores();
-  }
-
-  Future<void> _loadStores() async {
-    if (_storesLoading) {
-      return;
-    }
-    setState(() {
-      _storesLoading = true;
-      _storesError = null;
-    });
-
-    List<_StoreBrand> nextStores = const [];
-    String? loadError;
-
-    try {
-      final api = ComplaintsApi();
-      final entries = await api.getStoreCatalog();
-      nextStores = entries
-          .map(
-            (entry) => _StoreBrand(
-              storeId: entry.storeId,
-              name: entry.name,
-              primaryColor: _parseColor(entry.primaryColor),
-              secondaryColor: _parseColor(entry.secondaryColor),
-              email: entry.email,
-            ),
-          )
-          .toList(growable: false);
-    } catch (err) {
-      loadError = err.toString();
-    }
-
-    if (!mounted) {
-      return;
-    }
-
-    setState(() {
-      _storesLoading = false;
-      if (loadError != null) {
-        _storesError = loadError;
-      } else {
-        _storesError = null;
-        _storeBrands = nextStores;
-        if (_storeBrands.isEmpty) {
-          _selectedStoreId = null;
-          _selectedStoreName = null;
-        } else if (_selectedStoreId != null) {
-          final matches = _storeBrands
-              .where((store) => store.storeId == _selectedStoreId)
-              .toList();
-          if (matches.isEmpty) {
-            _selectedStoreId = null;
-            _selectedStoreName = null;
-          } else {
-            _selectedStoreName = matches.first.name;
-          }
-        }
-      }
-    });
-
-    if (loadError != null && mounted) {
-      _showMessage('Failed to load stores: $loadError');
+    _appState = Provider.of<AppState>(context, listen: false);
+    _storeBrands = _buildStoreBrands(_appState.stores);
+    _storesLoading = _appState.isLoadingStores;
+    _storesError = _appState.storesError;
+    _appStateListener = _handleAppStateChanged;
+    _appState.addListener(_appStateListener);
+    if (_storeBrands.isEmpty && !_storesLoading) {
+      _appState.refreshStoresFromServer();
     }
   }
 
@@ -135,8 +82,64 @@ class _NewCaseScreenState extends State<NewCaseScreen> {
     return AppColors.primary;
   }
 
+  List<_StoreBrand> _buildStoreBrands(List<StoreCatalogEntry> entries) {
+    return entries
+        .map(
+          (entry) => _StoreBrand(
+            storeId: entry.storeId,
+            name: entry.name,
+            primaryColor: _parseColor(entry.primaryColor),
+            secondaryColor: _parseColor(entry.secondaryColor),
+            email: entry.email,
+          ),
+        )
+        .toList(growable: false);
+  }
+
+  void _handleAppStateChanged() {
+    if (!mounted) return;
+
+    final nextBrands = _buildStoreBrands(_appState.stores);
+    final nextLoading = _appState.isLoadingStores;
+    final nextError = _appState.storesError;
+    String? nextSelectedId = _selectedStoreId;
+    String? nextSelectedName = _selectedStoreName;
+
+    if (_selectedStoreId != null) {
+      _StoreBrand? match;
+      for (final store in nextBrands) {
+        if (store.storeId == _selectedStoreId) {
+          match = store;
+          break;
+        }
+      }
+      if (match == null) {
+        nextSelectedId = null;
+        nextSelectedName = null;
+      } else {
+        nextSelectedName = match.name;
+      }
+    }
+
+    final previousError = _storesError;
+    setState(() {
+      _storeBrands = nextBrands;
+      _storesLoading = nextLoading;
+      _storesError = nextError;
+      _selectedStoreId = nextSelectedId;
+      _selectedStoreName = nextSelectedName;
+    });
+
+    if (nextError != null &&
+        nextError.isNotEmpty &&
+        nextError != previousError) {
+      _showMessage('Failed to load stores: $nextError');
+    }
+  }
+
   @override
   void dispose() {
+    _appState.removeListener(_appStateListener);
     _productController.dispose();
     _descriptionController.dispose();
     super.dispose();
@@ -369,7 +372,7 @@ class _NewCaseScreenState extends State<NewCaseScreen> {
           isLoading: _storesLoading,
           error: _storesError,
           onRetry: () {
-            _loadStores();
+            _appState.refreshStoresFromServer(force: true);
           },
         );
       case 1:

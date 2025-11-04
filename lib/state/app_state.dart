@@ -188,13 +188,16 @@ class AppState extends ChangeNotifier {
       final newVal = user != null;
       if (newVal != _isAuthenticated) {
         _isAuthenticated = newVal;
-        // Immediately notify so UI can transition to HomeShell/Login
-        notifyListeners();
         if (_isAuthenticated) {
+          // Immediately notify so UI can transition to HomeShell
+          notifyListeners();
           // Load cases in the background; UI is already switched
           refreshCasesFromServer();
+          refreshStoresFromServer(force: true);
         } else {
           _cases.clear();
+          _clearStoresState();
+          notifyListeners();
         }
       } else if (previousUser?.uid != _currentUser?.uid ||
           previousUser?.displayName != _currentUser?.displayName) {
@@ -210,6 +213,9 @@ class AppState extends ChangeNotifier {
 
   final List<CaseModel> _cases = [];
   final List<Voucher> _vouchers = [];
+  final List<StoreCatalogEntry> _stores = [];
+  bool _isLoadingStores = false;
+  String? _storesError;
   bool _isAuthenticated = false;
   HomeLanding _landingPreference = HomeLanding.cases;
 
@@ -231,6 +237,10 @@ class AppState extends ChangeNotifier {
     );
     return List.unmodifiable(sorted);
   }
+
+  List<StoreCatalogEntry> get stores => List.unmodifiable(_stores);
+  bool get isLoadingStores => _isLoadingStores;
+  String? get storesError => _storesError;
 
   Future<void> signIn({required String email, required String password}) async {
     await _authService.signInWithEmail(email: email, password: password);
@@ -310,6 +320,49 @@ class AppState extends ChangeNotifier {
       await refreshCasesFromServer();
     } catch (_) {
       // optionally show error
+    }
+  }
+
+  void _clearStoresState() {
+    _stores.clear();
+    _storesError = null;
+    _isLoadingStores = false;
+  }
+
+  Future<void> refreshStoresFromServer({bool force = false}) async {
+    if (!_isAuthenticated) {
+      final hadData =
+          _stores.isNotEmpty || _storesError != null || _isLoadingStores;
+      _clearStoresState();
+      if (hadData) {
+        notifyListeners();
+      }
+      return;
+    }
+
+    if (_isLoadingStores) {
+      return;
+    }
+
+    if (!force && _stores.isNotEmpty) {
+      return;
+    }
+
+    _isLoadingStores = true;
+    _storesError = null;
+    notifyListeners();
+
+    try {
+      final results = await _api.getStoreCatalog();
+      _stores
+        ..clear()
+        ..addAll(results);
+      _storesError = null;
+    } catch (e) {
+      _storesError = e.toString();
+    } finally {
+      _isLoadingStores = false;
+      notifyListeners();
     }
   }
 

@@ -997,6 +997,11 @@ class CaseCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final highlight = caseModel.hasUnreadUpdates;
     final requiresInfo = caseModel.requiresAdditionalInfo;
+    final Color borderColor = highlight
+        ? fadeColor(AppColors.primary, 0.35)
+        : requiresInfo
+            ? fadeColor(AppColors.warning, 0.32)
+            : fadeColor(AppColors.textPrimary, 0.12);
 
     return GestureDetector(
       onTap: () {
@@ -1011,11 +1016,12 @@ class CaseCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: borderColor, width: 1.4),
           boxShadow: [
             BoxShadow(
-              color: fadeColor(Colors.black, highlight ? 0.12 : 0.05),
-              blurRadius: highlight ? 18 : 10,
-              offset: const Offset(0, 8),
+              color: fadeColor(Colors.black, highlight ? 0.12 : 0.06),
+              blurRadius: highlight ? 18 : 12,
+              offset: const Offset(0, 10),
             ),
           ],
         ),
@@ -1050,7 +1056,10 @@ class CaseCard extends StatelessWidget {
                             ),
                           )
                         : CircleAvatar(
-                            backgroundColor: fadeColor(AppColors.primary, 0.1),
+                            backgroundColor: fadeColor(
+                              AppColors.primary,
+                              0.1,
+                            ),
                             child: Text(
                               toInitial(caseModel.storeName),
                               style: const TextStyle(
@@ -1068,8 +1077,7 @@ class CaseCard extends StatelessWidget {
                     children: [
                       Text(
                         caseModel.productName,
-                        style: Theme.of(context).textTheme.titleMedium
-                            ?.copyWith(
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
                               fontWeight: FontWeight.w700,
                               color: AppColors.textPrimary,
                             ),
@@ -1078,8 +1086,8 @@ class CaseCard extends StatelessWidget {
                       Text(
                         caseModel.storeName,
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: fadeColor(AppColors.textPrimary, 0.6),
-                        ),
+                              color: fadeColor(AppColors.textPrimary, 0.6),
+                            ),
                       ),
                     ],
                   ),
@@ -1099,8 +1107,8 @@ class CaseCard extends StatelessWidget {
                 Text(
                   'Updated ${formatRelativeTime(caseModel.lastUpdated)}',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: fadeColor(AppColors.textPrimary, 0.6),
-                  ),
+                        color: fadeColor(AppColors.textPrimary, 0.6),
+                      ),
                 ),
                 const Spacer(),
                 if (highlight)
@@ -1156,9 +1164,9 @@ class CaseCard extends StatelessWidget {
                       child: Text(
                         'We need one quick detail from you.',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: darkenColor(AppColors.warning),
-                          fontWeight: FontWeight.w600,
-                        ),
+                              color: darkenColor(AppColors.warning),
+                              fontWeight: FontWeight.w600,
+                            ),
                       ),
                     ),
                     const Icon(

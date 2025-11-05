@@ -104,6 +104,11 @@ class AppLocalizations {
       'copy': 'Copy',
       'timelineYou': 'You',
       'timelineSupport': 'Support',
+      'timelineSubmitted': 'Submitted',
+      'timelineInReview': 'We\'re reviewing your claim',
+      'timelineNeedsInfo': 'We\'ve requested additional info',
+      'timelineApproved': 'Approved',
+      'timelineRejected': 'Declined',
       'filePickFailed': 'Could not pick file: {error}',
       'answerRequired': 'Please provide an answer',
       'fileRequired': 'Please attach a file as requested',
@@ -251,6 +256,11 @@ class AppLocalizations {
       'copy': 'Kopiuj',
       'timelineYou': 'Ty',
       'timelineSupport': 'Wsparcie',
+      'timelineSubmitted': 'Zgłoszono',
+      'timelineInReview': 'Rozpatrujemy Twoją reklamację',
+      'timelineNeedsInfo': 'Poprosiliśmy o dodatkowe informacje',
+      'timelineApproved': 'Zaakceptowano',
+      'timelineRejected': 'Odrzucono',
       'filePickFailed': 'Nie można wybrać pliku: {error}',
       'answerRequired': 'Podaj odpowiedź',
       'fileRequired': 'Dołącz wymagany plik',
@@ -394,6 +404,11 @@ class AppLocalizations {
   String get copy => _lookup('copy');
   String get timelineYou => _lookup('timelineYou');
   String get timelineSupport => _lookup('timelineSupport');
+  String get timelineSubmitted => _lookup('timelineSubmitted');
+  String get timelineInReview => _lookup('timelineInReview');
+  String get timelineNeedsInfo => _lookup('timelineNeedsInfo');
+  String get timelineApproved => _lookup('timelineApproved');
+  String get timelineRejected => _lookup('timelineRejected');
   String get answerRequired => _lookup('answerRequired');
   String get fileRequired => _lookup('fileRequired');
   String get infoReceived => _lookup('infoReceived');

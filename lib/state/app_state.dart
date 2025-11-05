@@ -60,6 +60,78 @@ extension CaseStatusX on CaseStatus {
         return Icons.highlight_off_rounded;
     }
   }
+
+  String timelineMessage(AppLocalizations l10n) {
+    switch (this) {
+      case CaseStatus.pending:
+        return l10n.timelineSubmitted;
+      case CaseStatus.inReview:
+        return l10n.timelineInReview;
+      case CaseStatus.needsInfo:
+        return l10n.timelineNeedsInfo;
+      case CaseStatus.approved:
+        return l10n.timelineApproved;
+      case CaseStatus.rejected:
+        return l10n.timelineRejected;
+    }
+  }
+
+  String localizedNote(AppLocalizations l10n, String? rawNote) {
+    final note = rawNote?.trim();
+    if (note == null || note.isEmpty) {
+      return timelineMessage(l10n);
+    }
+
+    final normalized = note.toLowerCase();
+    if (this == CaseStatus.needsInfo && _matchesRequestMoreInfo(normalized)) {
+      return l10n.timelineNeedsInfo;
+    }
+
+    if (this == CaseStatus.pending &&
+        (normalized == 'submitted' ||
+            normalized == 'claim submitted' ||
+            normalized == 'case submitted')) {
+      return l10n.timelineSubmitted;
+    }
+
+    if (this == CaseStatus.approved &&
+        (normalized == 'approved' ||
+            normalized == 'case approved' ||
+            normalized == 'claim approved')) {
+      return l10n.timelineApproved;
+    }
+
+    if (this == CaseStatus.rejected &&
+        (normalized == 'declined' ||
+            normalized == 'rejected' ||
+            normalized == 'case rejected' ||
+            normalized == 'claim rejected')) {
+      return l10n.timelineRejected;
+    }
+
+    if (this == CaseStatus.inReview &&
+        (normalized == 'in review' ||
+            normalized == 'under review' ||
+            normalized == 'reviewing')) {
+      return l10n.timelineInReview;
+    }
+
+    return note;
+  }
+}
+
+bool _matchesRequestMoreInfo(String normalized) {
+  if (normalized.contains('request more info') ||
+      normalized.contains('requested more info') ||
+      normalized.contains('requesting more info')) {
+    return true;
+  }
+  if (normalized.contains('need more info') ||
+      normalized.contains('additional info needed') ||
+      normalized.contains('additional information needed')) {
+    return true;
+  }
+  return false;
 }
 
 enum HomeLanding { cases, rewards }
@@ -67,13 +139,13 @@ enum HomeLanding { cases, rewards }
 class CaseUpdate {
   CaseUpdate({
     required this.status,
-    required this.message,
+    this.note,
     required this.timestamp,
     this.isCustomerAction = false,
   });
 
   final CaseStatus status;
-  final String message;
+  final String? note;
   final DateTime timestamp;
   final bool isCustomerAction;
 }
@@ -730,14 +802,14 @@ class AppState extends ChangeNotifier {
       final at = atStr.isNotEmpty
           ? (DateTime.tryParse(atStr) ?? createdAt)
           : createdAt;
-      final msg = _statusMessageForTimeline(s, note);
       return CaseUpdate(
         status: s,
-        message: msg,
+        note: note.trim().isNotEmpty ? note.trim() : null,
         timestamp: at,
         isCustomerAction: false,
       );
-    }).toList()..sort((a, b) => a.timestamp.compareTo(b.timestamp));
+    }).toList()
+      ..sort((a, b) => a.timestamp.compareTo(b.timestamp));
 
     // Ensure there's an initial submitted entry at createdAt
     final hasSubmitted = timeline.any((e) => e.status == CaseStatus.pending);
@@ -746,7 +818,7 @@ class AppState extends ChangeNotifier {
         0,
         CaseUpdate(
           status: CaseStatus.pending,
-          message: 'Submitted',
+          note: null,
           timestamp: createdAt,
           isCustomerAction: true,
         ),
@@ -778,22 +850,6 @@ class AppState extends ChangeNotifier {
       infoRequestHistory: infoRequestHistory,
       infoResponseHistory: infoResponseHistory,
     );
-  }
-
-  String _statusMessageForTimeline(CaseStatus status, String note) {
-    final hasNote = note.trim().isNotEmpty;
-    switch (status) {
-      case CaseStatus.pending:
-        return 'Submitted';
-      case CaseStatus.inReview:
-        return hasNote ? note : 'We\'re reviewing your claim';
-      case CaseStatus.needsInfo:
-        return hasNote ? note : 'We\'ve requested additional info';
-      case CaseStatus.approved:
-        return hasNote ? note : 'Approved';
-      case CaseStatus.rejected:
-        return hasNote ? note : 'Declined';
-    }
   }
 
   CaseStatus _statusFromServer(String value) {

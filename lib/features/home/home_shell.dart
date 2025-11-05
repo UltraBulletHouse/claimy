@@ -1543,6 +1543,8 @@ class TimelineEntry extends StatelessWidget {
         ? context.l10n.timelineYou
         : context.l10n.timelineSupport;
     final timestampLabel = context.l10n.formatMediumDate(entry.timestamp);
+    final message =
+        entry.status.localizedNote(context.l10n, entry.note);
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: Row(
@@ -1586,7 +1588,7 @@ class TimelineEntry extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    entry.message,
+                    message,
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: AppColors.textPrimary,
                       fontWeight: FontWeight.w600,
@@ -2032,6 +2034,10 @@ class _PendingRequestCardState extends State<PendingRequestCard> {
 
   @override
   Widget build(BuildContext context) {
+    final rawMessage = widget.request.message.trim();
+    final message =
+        CaseStatus.needsInfo.localizedNote(context.l10n, rawMessage);
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -2058,7 +2064,7 @@ class _PendingRequestCardState extends State<PendingRequestCard> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      widget.request.message,
+                      message,
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w700,
                         color: AppColors.textPrimary,

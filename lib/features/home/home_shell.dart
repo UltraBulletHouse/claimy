@@ -37,11 +37,9 @@ class _HomeShellState extends State<HomeShell> {
       ),
     );
     if (created == true && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(context.l10n.claimSubmitted),
-        ),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(context.l10n.claimSubmitted)));
     }
   }
 
@@ -116,11 +114,12 @@ class _HomeShellState extends State<HomeShell> {
                           final unreadCount = appState.cases
                               .where((c) => c.hasUnreadUpdates)
                               .length;
-                          final message =
-                              context.l10n.homeUnreadCases(unreadCount);
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text(message)),
+                          final message = context.l10n.homeUnreadCases(
+                            unreadCount,
                           );
+                          ScaffoldMessenger.of(
+                            context,
+                          ).showSnackBar(SnackBar(content: Text(message)));
                         },
                         onMenuSelected: (action) {
                           switch (action) {
@@ -128,14 +127,14 @@ class _HomeShellState extends State<HomeShell> {
                               context.read<AppState>().signOut();
                               break;
                             case _MainMenuAction.languageEnglish:
-                              context
-                                  .read<AppState>()
-                                  .setLocale(const Locale('en'));
+                              context.read<AppState>().setLocale(
+                                const Locale('en'),
+                              );
                               break;
                             case _MainMenuAction.languagePolish:
-                              context
-                                  .read<AppState>()
-                                  .setLocale(const Locale('pl'));
+                              context.read<AppState>().setLocale(
+                                const Locale('pl'),
+                              );
                               break;
                           }
                         },
@@ -567,7 +566,10 @@ class _CasesViewState extends State<CasesView> {
       return const _CasesLoadingState();
     }
 
-    if (!isLoading && loadError != null && loadError.isNotEmpty && cases.isEmpty) {
+    if (!isLoading &&
+        loadError != null &&
+        loadError.isNotEmpty &&
+        cases.isEmpty) {
       return _CasesErrorState(
         message: loadError,
         onRetry: () => context.read<AppState>().refreshCasesFromServer(),
@@ -608,7 +610,7 @@ class _CasesViewState extends State<CasesView> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
+          padding: const EdgeInsets.fromLTRB(16, 2, 16, 0),
           child: TextField(
             controller: _searchController,
             decoration: InputDecoration(
@@ -851,8 +853,9 @@ class _CasesLoadingStateState extends State<_CasesLoadingState>
                     width: 26,
                     child: CircularProgressIndicator(
                       strokeWidth: 3,
-                      valueColor:
-                          AlwaysStoppedAnimation<Color>(AppColors.primary),
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        AppColors.primary,
+                      ),
                     ),
                   ),
                 ),
@@ -885,10 +888,7 @@ class _CasesLoadingStateState extends State<_CasesLoadingState>
 }
 
 class _CasesErrorState extends StatelessWidget {
-  const _CasesErrorState({
-    required this.message,
-    required this.onRetry,
-  });
+  const _CasesErrorState({required this.message, required this.onRetry});
 
   final String message;
   final VoidCallback onRetry;
@@ -910,7 +910,11 @@ class _CasesErrorState extends StatelessWidget {
             ),
             child: Column(
               children: [
-                Icon(Icons.cloud_off_rounded, color: AppColors.danger.withOpacity(0.9), size: 36),
+                Icon(
+                  Icons.cloud_off_rounded,
+                  color: AppColors.danger.withOpacity(0.9),
+                  size: 36,
+                ),
                 const SizedBox(height: 16),
                 Text(
                   context.l10n.caseSyncErrorTitle,
@@ -1038,8 +1042,8 @@ class CaseCard extends StatelessWidget {
     final Color borderColor = highlight
         ? fadeColor(AppColors.primary, 0.35)
         : requiresInfo
-            ? fadeColor(AppColors.warning, 0.32)
-            : fadeColor(AppColors.textPrimary, 0.12);
+        ? fadeColor(AppColors.warning, 0.32)
+        : fadeColor(AppColors.textPrimary, 0.12);
 
     return GestureDetector(
       onTap: () {
@@ -1094,10 +1098,7 @@ class CaseCard extends StatelessWidget {
                             ),
                           )
                         : CircleAvatar(
-                            backgroundColor: fadeColor(
-                              AppColors.primary,
-                              0.1,
-                            ),
+                            backgroundColor: fadeColor(AppColors.primary, 0.1),
                             child: Text(
                               toInitial(caseModel.storeName),
                               style: const TextStyle(
@@ -1115,7 +1116,8 @@ class CaseCard extends StatelessWidget {
                     children: [
                       Text(
                         caseModel.productName,
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(
                               fontWeight: FontWeight.w700,
                               color: AppColors.textPrimary,
                             ),
@@ -1124,8 +1126,8 @@ class CaseCard extends StatelessWidget {
                       Text(
                         caseModel.storeName,
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: fadeColor(AppColors.textPrimary, 0.6),
-                            ),
+                          color: fadeColor(AppColors.textPrimary, 0.6),
+                        ),
                       ),
                     ],
                   ),
@@ -1145,8 +1147,8 @@ class CaseCard extends StatelessWidget {
                 Text(
                   context.l10n.caseUpdated(caseModel.lastUpdated),
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: fadeColor(AppColors.textPrimary, 0.6),
-                      ),
+                    color: fadeColor(AppColors.textPrimary, 0.6),
+                  ),
                 ),
                 const Spacer(),
                 if (highlight)
@@ -1202,9 +1204,9 @@ class CaseCard extends StatelessWidget {
                       child: Text(
                         context.l10n.caseNeedsInfo,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: darkenColor(AppColors.warning),
-                              fontWeight: FontWeight.w600,
-                            ),
+                          color: darkenColor(AppColors.warning),
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
                     const Icon(
@@ -1269,10 +1271,11 @@ class _CaseDetailScreenState extends State<CaseDetailScreen> {
   }
 
   void _answerQuestion(String response) {
-    context.read<AppState>().respondToAdditionalInfoServer(widget.caseId, response: response);
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(
+    context.read<AppState>().respondToAdditionalInfoServer(
+      widget.caseId,
+      response: response,
+    );
+    ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(context.l10n.infoResponseNoted(response))),
     );
   }
@@ -1406,25 +1409,33 @@ class _CaseDetailScreenState extends State<CaseDetailScreen> {
           const SizedBox(height: 16),
           // NEW: Show all pending requests
           if (caseModel.pendingRequests.isNotEmpty)
-            ...caseModel.pendingRequests.map((request) => Padding(
-              padding: const EdgeInsets.only(bottom: 16),
-              child: PendingRequestCard(
-                request: request,
-                caseId: caseModel.id,
-                hasResponse: caseModel.hasResponse(request.id),
+            ...caseModel.pendingRequests.map(
+              (request) => Padding(
+                padding: const EdgeInsets.only(bottom: 16),
+                child: PendingRequestCard(
+                  request: request,
+                  caseId: caseModel.id,
+                  hasResponse: caseModel.hasResponse(request.id),
+                ),
               ),
-            )),
+            ),
           // Legacy: Show old-style card if using legacy fields
-          if (caseModel.requiresAdditionalInfo && caseModel.pendingRequests.isEmpty)
+          if (caseModel.requiresAdditionalInfo &&
+              caseModel.pendingRequests.isEmpty)
             AdditionalInfoCard(
               question: caseModel.pendingQuestion!,
               requiresFile: caseModel.requiresFile,
-              onSubmit: (response, attachmentBytes) => context.read<AppState>().respondToAdditionalInfoServer(
-                caseModel.id,
-                response: response,
-                attachment: attachmentBytes,
-              ),
-              onAnswer: (response) => context.read<AppState>().respondToAdditionalInfoServer(caseModel.id, response: response),
+              onSubmit: (response, attachmentBytes) =>
+                  context.read<AppState>().respondToAdditionalInfoServer(
+                    caseModel.id,
+                    response: response,
+                    attachment: attachmentBytes,
+                  ),
+              onAnswer: (response) =>
+                  context.read<AppState>().respondToAdditionalInfoServer(
+                    caseModel.id,
+                    response: response,
+                  ),
             ),
           const SizedBox(height: 16),
           Text(
@@ -1528,8 +1539,9 @@ class TimelineEntry extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final sourceLabel =
-        entry.isCustomerAction ? context.l10n.timelineYou : context.l10n.timelineSupport;
+    final sourceLabel = entry.isCustomerAction
+        ? context.l10n.timelineYou
+        : context.l10n.timelineSupport;
     final timestampLabel = context.l10n.formatMediumDate(entry.timestamp);
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
@@ -1611,67 +1623,67 @@ class AdditionalInfoCard extends StatefulWidget {
   final void Function(String response, Uint8List? attachmentBytes) onSubmit;
   final void Function(String response) onAnswer;
 
- @override
- State<AdditionalInfoCard> createState() => _AdditionalInfoCardState();
+  @override
+  State<AdditionalInfoCard> createState() => _AdditionalInfoCardState();
 }
 
 class _AdditionalInfoCardState extends State<AdditionalInfoCard> {
- final _controller = TextEditingController();
- Uint8List? _attachmentBytes;
- bool _submitting = false;
+  final _controller = TextEditingController();
+  Uint8List? _attachmentBytes;
+  bool _submitting = false;
 
- @override
- void dispose() {
-   _controller.dispose();
-   super.dispose();
- }
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
 
- Future<void> _pickAttachment() async {
-   try {
-     final picker = ImagePicker();
-     final picked = await picker.pickImage(
-       source: ImageSource.gallery,
-       maxWidth: 2048,
-       maxHeight: 2048,
-       imageQuality: 85,
-     );
-     if (picked != null) {
-       final bytes = await picked.readAsBytes();
-       setState(() => _attachmentBytes = bytes);
-     }
-   } catch (e) {
-     if (!mounted) return;
-     ScaffoldMessenger.of(context).showSnackBar(
-       SnackBar(content: Text(context.l10n.filePickFailed(e.toString()))),
-     );
-   }
- }
+  Future<void> _pickAttachment() async {
+    try {
+      final picker = ImagePicker();
+      final picked = await picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 2048,
+        maxHeight: 2048,
+        imageQuality: 85,
+      );
+      if (picked != null) {
+        final bytes = await picked.readAsBytes();
+        setState(() => _attachmentBytes = bytes);
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(context.l10n.filePickFailed(e.toString()))),
+      );
+    }
+  }
 
- Future<void> _submit() async {
-   final answer = _controller.text.trim();
-   if (answer.isEmpty) {
-     ScaffoldMessenger.of(context).showSnackBar(
-       SnackBar(content: Text(context.l10n.answerRequired)),
-     );
-     return;
-   }
-   if (widget.requiresFile && _attachmentBytes == null) {
-     ScaffoldMessenger.of(context).showSnackBar(
-       SnackBar(content: Text(context.l10n.fileRequired)),
-     );
-     return;
-   }
-   setState(() => _submitting = true);
-   try {
-     await Future.sync(() => widget.onSubmit(answer, _attachmentBytes));
-     if (!mounted) return;
-     ScaffoldMessenger.of(context).showSnackBar(
-       SnackBar(content: Text(context.l10n.infoReceived)),
-     );
-   } finally {
-     if (mounted) setState(() => _submitting = false);
-   }
- }
+  Future<void> _submit() async {
+    final answer = _controller.text.trim();
+    if (answer.isEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(context.l10n.answerRequired)));
+      return;
+    }
+    if (widget.requiresFile && _attachmentBytes == null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(context.l10n.fileRequired)));
+      return;
+    }
+    setState(() => _submitting = true);
+    try {
+      await Future.sync(() => widget.onSubmit(answer, _attachmentBytes));
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(context.l10n.infoReceived)));
+    } finally {
+      if (mounted) setState(() => _submitting = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -1941,9 +1953,9 @@ class _PendingRequestCardState extends State<PendingRequestCard> {
       return;
     }
     if (widget.request.requiresFile && _attachmentBytes == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(context.l10n.fileRequired)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(context.l10n.fileRequired)));
       return;
     }
     setState(() => _submitting = true);
@@ -1955,9 +1967,9 @@ class _PendingRequestCardState extends State<PendingRequestCard> {
         attachment: _attachmentBytes,
       );
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(context.l10n.infoReceived)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(context.l10n.infoReceived)));
       setState(() {
         _showForm = false;
         _controller.clear();
@@ -1982,9 +1994,9 @@ class _PendingRequestCardState extends State<PendingRequestCard> {
         response: answer,
       );
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(context.l10n.infoReceived)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(context.l10n.infoReceived)));
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -2005,9 +2017,9 @@ class _PendingRequestCardState extends State<PendingRequestCard> {
         attachment: attachment,
       );
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(context.l10n.fileReceived)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(context.l10n.fileReceived)));
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -2023,9 +2035,9 @@ class _PendingRequestCardState extends State<PendingRequestCard> {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: widget.hasResponse 
-          ? fadeColor(Colors.green, 0.12)
-          : fadeColor(AppColors.warning, 0.12),
+        color: widget.hasResponse
+            ? fadeColor(Colors.green, 0.12)
+            : fadeColor(AppColors.warning, 0.12),
         borderRadius: BorderRadius.circular(24),
       ),
       child: Column(
@@ -2035,9 +2047,9 @@ class _PendingRequestCardState extends State<PendingRequestCard> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Icon(
-                widget.hasResponse 
-                  ? Icons.check_circle_outline_rounded
-                  : Icons.chat_bubble_outline_rounded,
+                widget.hasResponse
+                    ? Icons.check_circle_outline_rounded
+                    : Icons.chat_bubble_outline_rounded,
                 color: widget.hasResponse ? Colors.green : AppColors.warning,
               ),
               const SizedBox(width: 12),
@@ -2072,10 +2084,14 @@ class _PendingRequestCardState extends State<PendingRequestCard> {
                             const SizedBox(width: 4),
                             Text(
                               context.l10n.fileUploadRequired,
-                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: fadeColor(AppColors.textPrimary, 0.6),
-                                fontWeight: FontWeight.w600,
-                              ),
+                              style: Theme.of(context).textTheme.bodySmall
+                                  ?.copyWith(
+                                    color: fadeColor(
+                                      AppColors.textPrimary,
+                                      0.6,
+                                    ),
+                                    fontWeight: FontWeight.w600,
+                                  ),
                             ),
                           ],
                         ),
@@ -2105,7 +2121,11 @@ class _PendingRequestCardState extends State<PendingRequestCard> {
                     child: ElevatedButton(
                       onPressed: _submitting ? null : () => _answer('Yes'),
                       child: _submitting
-                          ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
                           : Text(context.l10n.yes),
                     ),
                   ),
@@ -2114,7 +2134,11 @@ class _PendingRequestCardState extends State<PendingRequestCard> {
                     child: ElevatedButton(
                       onPressed: _submitting ? null : () => _answer('No'),
                       child: _submitting
-                          ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
                           : Text(context.l10n.no),
                     ),
                   ),
@@ -2180,5 +2204,4 @@ class _PendingRequestCardState extends State<PendingRequestCard> {
       ),
     );
   }
-
 }

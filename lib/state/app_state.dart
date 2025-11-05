@@ -187,7 +187,7 @@ class AppState extends ChangeNotifier {
   static const String _storesCacheKeyPrefix = 'app_state.stores';
   static const String _localeStorageKey = 'app_state.locale';
 
-  AppState() {
+  AppState({Locale? initialLocale}) : _locale = initialLocale ?? const Locale('en') {
     unawaited(_loadLocale());
     _authService = AuthService();
     _api = ComplaintsApi();
@@ -222,7 +222,7 @@ class AppState extends ChangeNotifier {
   late final ComplaintsApi _api;
   StreamSubscription? _authSub;
   User? _currentUser;
-  Locale _locale = const Locale('en');
+  Locale _locale;
 
   final List<CaseModel> _cases = [];
   final List<Voucher> _vouchers = [];
@@ -285,6 +285,19 @@ class AppState extends ChangeNotifier {
   Future<void> signOut() async {
     await _authService.signOut();
     _currentUser = null;
+  }
+
+  static Future<Locale?> loadSavedLocale() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final stored = prefs.getString(_localeStorageKey);
+      if (stored != null && stored.isNotEmpty) {
+        return Locale(stored);
+      }
+    } catch (_) {
+      // Ignore locale restore failures; defaults will apply.
+    }
+    return null;
   }
 
   void setLandingPreference(HomeLanding view) {

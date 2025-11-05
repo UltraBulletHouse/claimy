@@ -10,7 +10,11 @@ import 'package:claimy/firebase_options.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  final initialLocale = await AppState.loadSavedLocale();
   runApp(
-    ChangeNotifierProvider(create: (_) => AppState(), child: const ClaimyApp()),
+    ChangeNotifierProvider(
+      create: (_) => AppState(initialLocale: initialLocale),
+      child: const ClaimyApp(),
+    ),
   );
 }

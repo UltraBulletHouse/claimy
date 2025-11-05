@@ -444,6 +444,10 @@ class AppState extends ChangeNotifier {
       _cases
         ..clear()
         ..addAll(result.items.map(_mapServerCaseToModel));
+      
+      // Extract vouchers from approved cases
+      _extractVouchersFromCases(result.items);
+      
       _casesError = null;
       final fetchedAt = DateTime.now();
       _casesFetchedAt = fetchedAt;
@@ -456,6 +460,45 @@ class AppState extends ChangeNotifier {
     } finally {
       _isLoadingCases = false;
       notifyListeners();
+    }
+  }
+
+  void _extractVouchersFromCases(List<Map<String, dynamic>> rawCases) {
+    _vouchers.clear();
+    
+    for (final caseData in rawCases) {
+      final statusStr = (caseData['status'] ?? '').toString().toUpperCase();
+      if (statusStr != 'APPROVED') continue;
+      
+      final resolution = caseData['resolution'];
+      if (resolution == null || resolution is! Map) continue;
+      
+      final code = resolution['code']?.toString();
+      if (code == null || code.isEmpty) continue;
+      
+      final expiryStr = resolution['expiryDate']?.toString();
+      if (expiryStr == null || expiryStr.isEmpty) continue;
+      
+      final expiry = DateTime.tryParse(expiryStr);
+      if (expiry == null) continue;
+      
+      final caseId = (caseData['id'] ?? caseData['_id'] ?? '').toString();
+      final storeName = (caseData['store'] ?? caseData['storeName'] ?? 'Store').toString();
+      final productName = (caseData['product'] ?? caseData['productName'] ?? 'Product').toString();
+      
+      // Check if voucher is already marked as used (we'll store this in resolution)
+      final used = resolution['used'] == true;
+      
+      _vouchers.add(
+        Voucher(
+          id: caseId,
+          storeName: storeName,
+          amountLabel: productName,
+          code: code,
+          expiration: expiry,
+          used: used,
+        ),
+      );
     }
   }
 
@@ -530,6 +573,10 @@ class AppState extends ChangeNotifier {
             _cases
               ..clear()
               ..addAll(rawCases.map(_mapServerCaseToModel));
+            
+            // Extract vouchers from cached cases
+            _extractVouchersFromCases(rawCases);
+            
             _casesError = null;
             updated = true;
           }
@@ -784,12 +831,25 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  void toggleVoucherUsed(String id) {
+  Future<void> toggleVoucherUsed(String id) async {
     final voucher = _vouchers.firstWhere(
       (v) => v.id == id,
       orElse: () => throw ArgumentError('Voucher not found'),
     );
-    voucher.used = !voucher.used;
+    
+    // Toggle locally first for instant UI feedback
+    final newUsedState = !voucher.used;
+    voucher.used = newUsedState;
     notifyListeners();
+    
+    // Persist to server
+    try {
+      await _api.updateVoucherUsedStatus(caseId: id, used: newUsedState);
+    } catch (e) {
+      // Revert on error
+      voucher.used = !newUsedState;
+      notifyListeners();
+      // Could show error to user here
+    }
   }
 }

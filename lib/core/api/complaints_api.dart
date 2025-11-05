@@ -140,6 +140,30 @@ class ComplaintsApi {
 
   Uri _url(String path) => Uri.parse('$_baseUrl/api/public$path');
 
+  Future<void> updateVoucherUsedStatus({
+    required String caseId,
+    required bool used,
+  }) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      throw SubmitException('Not authenticated', statusCode: 401);
+    }
+    final idToken = await user.getIdToken(true);
+    
+    final resp = await http.patch(
+      _url('/cases/$caseId/voucher-used'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $idToken',
+      },
+      body: jsonEncode({'used': used}),
+    );
+    
+    if (resp.statusCode < 200 || resp.statusCode >= 300) {
+      throw SubmitException('Request failed (${resp.statusCode})', statusCode: resp.statusCode);
+    }
+  }
+
   Future<void> submitInfoResponse({
     required String caseId,
     String? requestId,

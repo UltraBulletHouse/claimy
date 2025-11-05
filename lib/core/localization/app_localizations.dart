@@ -235,7 +235,7 @@ class AppLocalizations {
       'statusPending': 'Oczekujące',
       'statusInReview': 'W trakcie',
       'statusNeedsInfo': 'Informacja',
-      'statusApproved': 'Zaakcept.',
+      'statusApproved': 'Uznany',
       'statusRejected': 'Odrzucone',
       'infoResponseNoted': 'Dziękujemy! Zanotowaliśmy „{response}”.',
       'caseNotFound': 'Nie znaleziono sprawy',

@@ -1734,106 +1734,261 @@ class VoucherCard extends StatelessWidget {
 
   final Voucher voucher;
 
+  void _copyToClipboard(BuildContext context) {
+    Clipboard.setData(ClipboardData(text: voucher.code));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(context.l10n.voucherCopied),
+        duration: const Duration(seconds: 2),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  void _shareVoucher(BuildContext context) async {
+    final text = 'Voucher code for ${voucher.storeName}: ${voucher.code}\nExpires: ${voucher.expiration.toLocal().toString().split(' ')[0]}';
+    Clipboard.setData(ClipboardData(text: text));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(context.l10n.voucherReadyToShare),
+        duration: const Duration(seconds: 2),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final expiresIn = voucher.expiration.difference(DateTime.now()).inDays;
-    final expiryLabel = expiresIn >= 0
-        ? context.l10n.voucherExpires(expiresIn)
-        : context.l10n.voucherExpired;
+    final now = DateTime.now();
+    final expiresIn = voucher.expiration.difference(now).inDays;
+    final isExpired = voucher.expiration.isBefore(now);
+    final expiryLabel = isExpired
+        ? context.l10n.voucherExpired
+        : context.l10n.voucherExpires(expiresIn);
     final appState = context.read<AppState>();
 
     return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
-      elevation: 0,
+      margin: const EdgeInsets.only(bottom: 10),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      elevation: 1,
       color: Colors.white,
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
+      child: InkWell(
+        onTap: () => _copyToClipboard(context),
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: voucher.used
+                  ? fadeColor(AppColors.textPrimary, 0.15)
+                  : isExpired
+                      ? fadeColor(AppColors.danger, 0.3)
+                      : fadeColor(AppColors.accent, 0.3),
+              width: 1.5,
+            ),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                CircleAvatar(
-                  backgroundColor: fadeColor(AppColors.accent, 0.12),
-                  child: Text(
-                    toInitial(voucher.storeName),
-                    style: const TextStyle(
-                      color: AppColors.accent,
-                      fontWeight: FontWeight.w700,
+                // Header row: Store info + expired badge + used checkbox
+                Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 18,
+                      backgroundColor: fadeColor(AppColors.accent, 0.15),
+                      child: Text(
+                        toInitial(voucher.storeName),
+                        style: const TextStyle(
+                          color: AppColors.accent,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            voucher.storeName,
+                            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.textPrimary,
+                                ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          Text(
+                            voucher.amountLabel,
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  color: fadeColor(AppColors.textPrimary, 0.65),
+                                ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (isExpired)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: fadeColor(AppColors.danger, 0.12),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          'EXP',
+                          style: TextStyle(
+                            color: AppColors.danger,
+                            fontSize: 9,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ),
+                    const SizedBox(width: 8),
+                    // Compact used checkbox
+                    GestureDetector(
+                      onTap: () => appState.toggleVoucherUsed(voucher.id),
+                      child: Icon(
+                        voucher.used
+                            ? Icons.check_circle
+                            : Icons.radio_button_unchecked,
+                        color: voucher.used
+                            ? AppColors.success
+                            : fadeColor(AppColors.textPrimary, 0.3),
+                        size: 24,
+                      ),
+                    ),
+                  ],
+                ),
+                
+                const SizedBox(height: 12),
+                
+                // Compact voucher code with inline actions
+                Container(
+                  padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: voucher.used
+                          ? [
+                              fadeColor(AppColors.textPrimary, 0.06),
+                              fadeColor(AppColors.textPrimary, 0.03),
+                            ]
+                          : [
+                              fadeColor(AppColors.accent, 0.12),
+                              fadeColor(AppColors.accent, 0.06),
+                            ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: voucher.used
+                          ? fadeColor(AppColors.textPrimary, 0.12)
+                          : fadeColor(AppColors.accent, 0.25),
+                      width: 1,
                     ),
                   ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  child: Row(
                     children: [
-                      Text(
-                        voucher.storeName,
-                        style: Theme.of(context).textTheme.titleMedium
-                            ?.copyWith(
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.textPrimary,
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'CODE',
+                              style: TextStyle(
+                                fontSize: 9,
+                                fontWeight: FontWeight.w700,
+                                color: fadeColor(AppColors.textPrimary, 0.5),
+                                letterSpacing: 1,
+                              ),
                             ),
+                            const SizedBox(height: 2),
+                            Text(
+                              voucher.code,
+                              style: TextStyle(
+                                fontFamily: 'Courier',
+                                fontSize: 17,
+                                fontWeight: FontWeight.w900,
+                                color: voucher.used
+                                    ? fadeColor(AppColors.textPrimary, 0.5)
+                                    : AppColors.primary,
+                                letterSpacing: 1,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        voucher.amountLabel,
-                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                          color: AppColors.textPrimary,
-                          fontWeight: FontWeight.w700,
+                      const SizedBox(width: 8),
+                      // Inline action buttons
+                      InkWell(
+                        onTap: () => _shareVoucher(context),
+                        borderRadius: BorderRadius.circular(8),
+                        child: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: fadeColor(AppColors.primary, 0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Icon(
+                            Icons.share_rounded,
+                            size: 16,
+                            color: AppColors.primary,
+                          ),
                         ),
                       ),
                     ],
                   ),
                 ),
-                Switch(
-                  value: voucher.used,
-                  onChanged: (_) {
-                    appState.toggleVoucherUsed(voucher.id);
-                  },
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Icon(
-                  Icons.timer_outlined,
-                  size: 16,
-                  color: fadeColor(AppColors.textPrimary, 0.6),
-                ),
-                const SizedBox(width: 6),
-                Text(
-                  expiryLabel,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: fadeColor(AppColors.textPrimary, 0.6),
-                  ),
-                ),
-                const Spacer(),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 8,
-                  ),
-                  decoration: BoxDecoration(
-                    color: AppColors.surface,
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Text(
-                    voucher.code,
-                    style: const TextStyle(
-                      letterSpacing: 1.2,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.textPrimary,
+                
+                const SizedBox(height: 10),
+                
+                // Bottom row: Expiry + tap hint
+                Row(
+                  children: [
+                    Icon(
+                      isExpired ? Icons.error_outline : Icons.schedule,
+                      size: 14,
+                      color: isExpired
+                          ? AppColors.danger
+                          : fadeColor(AppColors.textPrimary, 0.6),
                     ),
-                  ),
+                    const SizedBox(width: 4),
+                    Text(
+                      expiryLabel,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            fontSize: 11,
+                            color: isExpired
+                                ? AppColors.danger
+                                : fadeColor(AppColors.textPrimary, 0.7),
+                            fontWeight: isExpired ? FontWeight.w600 : FontWeight.w500,
+                          ),
+                    ),
+                    const Spacer(),
+                    Icon(
+                      Icons.copy_rounded,
+                      size: 12,
+                      color: fadeColor(AppColors.textPrimary, 0.4),
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Tap to copy',
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: fadeColor(AppColors.textPrimary, 0.5),
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
-          ],
+          ),
         ),
       ),
     );

@@ -4,6 +4,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter/services.dart';
 import 'dart:typed_data';
 import 'package:image_picker/image_picker.dart';
+import 'package:share_plus/share_plus.dart';
 
 import 'package:claimy/core/localization/localization_extensions.dart';
 import 'package:claimy/core/theme/app_colors.dart';
@@ -2005,7 +2006,30 @@ class _VoucherCardState extends State<VoucherCard> with SingleTickerProviderStat
 
   void _shareVoucher(BuildContext context) async {
     final text = 'Voucher code for ${widget.voucher.storeName}: ${widget.voucher.code}\nExpires: ${widget.voucher.expiration.toLocal().toString().split(' ')[0]}';
-    Clipboard.setData(ClipboardData(text: text));
+    
+    try {
+      // Try to use native share API (works on mobile web and native apps)
+      final result = await Share.share(
+        text,
+        subject: 'Voucher for ${widget.voucher.storeName}',
+      );
+      
+      // If share was successful or dismissed, don't show snackbar
+      if (result.status == ShareResultStatus.success) {
+        // Share was successful, no need to show additional feedback
+        return;
+      } else if (result.status == ShareResultStatus.dismissed) {
+        // User dismissed the share dialog, no need to show feedback
+        return;
+      }
+      // If unavailable, fall through to clipboard fallback
+    } catch (e) {
+      // Share API not available, fall back to clipboard
+    }
+    
+    // Fallback: Copy to clipboard
+    await Clipboard.setData(ClipboardData(text: text));
+    if (!context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(context.l10n.voucherReadyToShare),

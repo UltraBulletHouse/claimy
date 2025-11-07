@@ -772,8 +772,8 @@ class _PhotoBox extends StatelessWidget {
         lower.endsWith('.png') ||
         lower.endsWith('.webp');
     if (!okExt) return false;
-    // 5 MB limit
-    if (size > 5 * 1024 * 1024) return false;
+    // 10 MB limit
+    if (size > 10 * 1024 * 1024) return false;
     return true;
   }
 

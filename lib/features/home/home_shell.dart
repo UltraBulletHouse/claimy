@@ -1857,6 +1857,14 @@ class _AdditionalInfoCardState extends State<AdditionalInfoCard> {
       );
       if (picked != null) {
         final bytes = await picked.readAsBytes();
+        // 10 MB limit
+        if (bytes.length > 10 * 1024 * 1024) {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(context.l10n.imageSizeMessage)),
+          );
+          return;
+        }
         setState(() => _attachmentBytes = bytes);
       }
     } catch (e) {
@@ -2346,6 +2354,14 @@ class _PendingRequestCardState extends State<PendingRequestCard> {
       );
       if (picked != null) {
         final bytes = await picked.readAsBytes();
+        // 10 MB limit
+        if (bytes.length > 10 * 1024 * 1024) {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(context.l10n.imageSizeMessage)),
+          );
+          return;
+        }
         if (widget.request.requiresFile) {
           _submitFile(bytes);
         } else {

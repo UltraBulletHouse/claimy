@@ -729,8 +729,6 @@ class AppState extends ChangeNotifier {
         : '';
     final requiresFileServer = (infoReq?['requiresFile'] == true);
 
-    final productImageUrl = (m['productImageUrl'] ?? m['product_image_url'])
-        ?.toString();
     final images = (m['images'] as List?)?.cast<dynamic>() ?? const [];
 
     // NEW: Parse info request history
@@ -833,16 +831,8 @@ class AppState extends ChangeNotifier {
       status: status,
       history: timeline,
       hasUnreadUpdates: false,
-      productImageUrl: productImageUrl?.isNotEmpty == true
-          ? productImageUrl
-          : (images.isNotEmpty ? images.first?.toString() : null),
-      receiptImageUrl:
-          ((m['receiptImageUrl'] ?? m['receipt_image_url'])
-                  ?.toString()
-                  .isNotEmpty ??
-              false)
-          ? (m['receiptImageUrl'] ?? m['receipt_image_url']).toString()
-          : (images.length > 1 ? images[1]?.toString() : null),
+      productImageUrl: images.isNotEmpty ? images.first?.toString() : null,
+      receiptImageUrl: images.length > 1 ? images[1]?.toString() : null,
       pendingQuestion: pendingQuestionServer.isNotEmpty
           ? pendingQuestionServer
           : null,

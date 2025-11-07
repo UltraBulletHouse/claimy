@@ -58,9 +58,15 @@ class UploadsApi {
     final resp = await http.Response.fromStream(streamed);
     if (resp.statusCode >= 200 && resp.statusCode < 300) {
       final data = jsonDecode(resp.body) as Map<String, dynamic>;
+      // Prefer images array, fall back to legacy properties
+      final images = (data['images'] as List?)?.cast<String>() ?? [];
       return UploadResult(
-        productImageUrl: data['productImageUrl']?.toString(),
-        receiptImageUrl: data['receiptImageUrl']?.toString(),
+        productImageUrl: images.isNotEmpty 
+            ? images[0]
+            : data['productImageUrl']?.toString(),
+        receiptImageUrl: images.length > 1 
+            ? images[1]
+            : data['receiptImageUrl']?.toString(),
       );
     } else {
       throw Exception('Upload failed: ${resp.statusCode}');

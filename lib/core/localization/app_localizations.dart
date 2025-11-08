@@ -128,6 +128,9 @@ class AppLocalizations {
       'voucherReadyToShare': 'Voucher details copied to clipboard',
       'voucherMarkAsUsed': 'Mark as used',
       'voucherMarkedAsUsed': 'Marked as used',
+      'voucherFilterUnused': 'Unused',
+      'voucherFilterUsed': 'Used',
+      'voucherFilterExpired': 'Expired',
       'answerOrFileRequired': 'Please provide an answer or attach a file',
       'fileReceived': 'Thanks! We received your file.',
       'submitFailed': 'Failed to submit: {error}',
@@ -287,6 +290,9 @@ class AppLocalizations {
       'voucherReadyToShare': 'Szczegóły kuponu skopiowane do schowka',
       'voucherMarkAsUsed': 'Oznacz jako zrealizowany',
       'voucherMarkedAsUsed': 'Oznaczony jako zrealizowany',
+      'voucherFilterUnused': 'Do użycia',
+      'voucherFilterUsed': 'Użyte',
+      'voucherFilterExpired': 'Wygasłe',
       'answerOrFileRequired': 'Podaj odpowiedź lub dołącz plik',
       'fileReceived': 'Dziękujemy! Otrzymaliśmy Twój plik.',
       'submitFailed': 'Nie udało się wysłać: {error}',
@@ -438,6 +444,9 @@ class AppLocalizations {
   String get voucherReadyToShare => _lookup('voucherReadyToShare');
   String get voucherMarkAsUsed => _lookup('voucherMarkAsUsed');
   String get voucherMarkedAsUsed => _lookup('voucherMarkedAsUsed');
+  String get voucherFilterUnused => _lookup('voucherFilterUnused');
+  String get voucherFilterUsed => _lookup('voucherFilterUsed');
+  String get voucherFilterExpired => _lookup('voucherFilterExpired');
   String get answerOrFileRequired => _lookup('answerOrFileRequired');
   String get fileReceived => _lookup('fileReceived');
   String get fileUploadRequired => _lookup('fileUploadRequired');

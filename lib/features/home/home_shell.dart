@@ -11,6 +11,8 @@ import 'package:claimy/core/utils/string_utils.dart';
 import 'package:claimy/features/new_case/new_case_screen.dart';
 import 'package:claimy/state/app_state.dart';
 
+const _unusedVoucherAccent = Color(0xFFFFB347);
+
 class HomeShell extends StatefulWidget {
   const HomeShell({super.key});
 
@@ -963,7 +965,7 @@ class _FilterConfig {
   final VoidCallback onTap;
 }
 
-enum VoucherFilter { all, unused, expired }
+enum VoucherFilter { used, unused, expired }
 
 class RewardsView extends StatefulWidget {
   const RewardsView({super.key});
@@ -973,7 +975,7 @@ class RewardsView extends StatefulWidget {
 }
 
 class _RewardsViewState extends State<RewardsView> {
-  VoucherFilter _filter = VoucherFilter.all;
+  VoucherFilter _filter = VoucherFilter.used;
 
   @override
   Widget build(BuildContext context) {
@@ -983,12 +985,12 @@ class _RewardsViewState extends State<RewardsView> {
     // Apply filter
     final filteredVouchers = allVouchers.where((v) {
       switch (_filter) {
+        case VoucherFilter.used:
+          return v.used;
         case VoucherFilter.unused:
           return !v.used;
         case VoucherFilter.expired:
           return v.expiration.isBefore(now);
-        case VoucherFilter.all:
-          return true;
       }
     }).toList();
 
@@ -1001,30 +1003,26 @@ class _RewardsViewState extends State<RewardsView> {
             child: Row(
               children: [
                 _VoucherFilterChip(
-                  label: 'All',
-                  icon: Icons.grid_view_rounded,
-                  selected: _filter == VoucherFilter.all,
-                  onTap: () => setState(() => _filter = VoucherFilter.all),
-                  count: allVouchers.length,
-                ),
-                const SizedBox(width: 8),
-                _VoucherFilterChip(
-                  label: 'Unused',
+                  label: context.l10n.voucherFilterUnused,
                   icon: Icons.circle_outlined,
                   selected: _filter == VoucherFilter.unused,
                   onTap: () => setState(() => _filter = VoucherFilter.unused),
-                  count: allVouchers.where((v) => !v.used).length,
+                  accent: _unusedVoucherAccent,
+                ),
+                const SizedBox(width: 8),
+                _VoucherFilterChip(
+                  label: context.l10n.voucherFilterUsed,
+                  icon: Icons.check_circle_rounded,
+                  selected: _filter == VoucherFilter.used,
+                  onTap: () => setState(() => _filter = VoucherFilter.used),
                   accent: AppColors.success,
                 ),
                 const SizedBox(width: 8),
                 _VoucherFilterChip(
-                  label: 'Expired',
+                  label: context.l10n.voucherFilterExpired,
                   icon: Icons.schedule_rounded,
                   selected: _filter == VoucherFilter.expired,
                   onTap: () => setState(() => _filter = VoucherFilter.expired),
-                  count: allVouchers
-                      .where((v) => v.expiration.isBefore(now))
-                      .length,
                   accent: AppColors.danger,
                 ),
               ],
@@ -1037,11 +1035,11 @@ class _RewardsViewState extends State<RewardsView> {
               : filteredVouchers.isEmpty
               ? _EmptyState(
                   title: 'No vouchers found',
-                  subtitle: _filter == VoucherFilter.unused
-                      ? 'All vouchers have been used'
-                      : _filter == VoucherFilter.expired
-                      ? 'No expired vouchers'
-                      : 'No vouchers available',
+                  subtitle: _filter == VoucherFilter.used
+                      ? 'No redeemed vouchers yet'
+                      : _filter == VoucherFilter.unused
+                          ? 'All vouchers have been used'
+                          : 'No expired vouchers',
                 )
               : ListView.builder(
                   padding: const EdgeInsets.symmetric(
@@ -1069,7 +1067,6 @@ class _VoucherFilterChip extends StatelessWidget {
     required this.icon,
     required this.selected,
     required this.onTap,
-    required this.count,
     this.accent,
   });
 
@@ -1077,7 +1074,6 @@ class _VoucherFilterChip extends StatelessWidget {
   final IconData icon;
   final bool selected;
   final VoidCallback onTap;
-  final int count;
   final Color? accent;
 
   @override
@@ -1125,29 +1121,6 @@ class _VoucherFilterChip extends StatelessWidget {
                           : fadeColor(AppColors.textPrimary, 0.8),
                     ),
                     overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                const SizedBox(width: 4),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 6,
-                    vertical: 2,
-                  ),
-                  decoration: BoxDecoration(
-                    color: selected
-                        ? fadeColor(Colors.white, 0.3)
-                        : fadeColor(AppColors.textPrimary, 0.08),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    count.toString(),
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                      color: selected
-                          ? Colors.white
-                          : fadeColor(AppColors.textPrimary, 0.7),
-                    ),
                   ),
                 ),
               ],
@@ -2006,11 +1979,8 @@ class _VoucherCardState extends State<VoucherCard>
         : context.l10n.voucherExpires(expiresIn);
 
     final highlight = !widget.voucher.used && !isExpired;
-    const readyAccent = Color(
-      0xFFFFB347,
-    ); // midway orange/yellow for ready vouchers
     final Color borderColor = highlight
-        ? fadeColor(readyAccent, 0.5)
+        ? fadeColor(_unusedVoucherAccent, 0.5)
         : isExpired
         ? fadeColor(AppColors.danger, 0.35)
         : fadeColor(AppColors.textPrimary, 0.15);
@@ -2019,7 +1989,7 @@ class _VoucherCardState extends State<VoucherCard>
         ? AppColors.danger
         : widget.voucher.used
         ? AppColors.success
-        : readyAccent;
+        : _unusedVoucherAccent;
 
     return ScaleTransition(
       scale: _scaleAnimation,
@@ -2035,7 +2005,7 @@ class _VoucherCardState extends State<VoucherCard>
             boxShadow: [
               BoxShadow(
                 color: fadeColor(
-                  highlight ? readyAccent : Colors.black,
+                  highlight ? _unusedVoucherAccent : Colors.black,
                   highlight ? 0.2 : 0.04,
                 ),
                 blurRadius: highlight ? 22 : 14,

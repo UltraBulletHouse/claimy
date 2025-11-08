@@ -2156,10 +2156,10 @@ class _VoucherCardState extends State<VoucherCard> with SingleTickerProviderStat
                                   ? Icons.verified_rounded
                                   : Icons.flash_on_rounded,
                           label: isExpired
-                              ? 'Expired'
+                              ? context.l10n.voucherExpired
                               : widget.voucher.used
-                                  ? 'Redeemed'
-                                  : 'Ready to use',
+                                  ? context.l10n.voucherRedeemed
+                                  : context.l10n.voucherReadyToUse,
                           background: fadeColor(accent, 0.12),
                           foreground: accent,
                         ),
@@ -2275,7 +2275,7 @@ class _VoucherCardState extends State<VoucherCard> with SingleTickerProviderStat
                     ),
                     const SizedBox(width: 4),
                     Text(
-                      'Tap to copy',
+                      context.l10n.tapToCopy,
                       style: TextStyle(
                         fontSize: 11,
                         color: mutedText,

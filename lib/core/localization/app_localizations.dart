@@ -122,6 +122,8 @@ class AppLocalizations {
       'voucherExpiresOne': 'Expires in 1 day',
       'voucherExpiresOther': 'Expires in {days} days',
       'voucherExpired': 'Expired',
+      'voucherReadyToUse': 'Ready to use',
+      'voucherRedeemed': 'Redeemed',
       'voucherCopied': 'Voucher code copied to clipboard',
       'voucherReadyToShare': 'Voucher details copied to clipboard',
       'voucherMarkAsUsed': 'Mark as used',
@@ -144,6 +146,7 @@ class AppLocalizations {
       'relativeDays': '{count} d ago',
       'photoAdded': 'Photo added',
       'tapToAdd': 'Tap to add',
+      'tapToCopy': 'Tap to copy',
       'storeLoadFailed': 'Failed to load stores: {error}',
       'selectStore': 'Select a store to continue.',
       'productNamePrompt': 'Tell us the product name.',
@@ -278,6 +281,8 @@ class AppLocalizations {
       'voucherExpiresOne': 'Wygasa za 1 dzień',
       'voucherExpiresOther': 'Wygasa za {days} dni',
       'voucherExpired': 'Wygasło',
+      'voucherReadyToUse': 'Gotowy do użycia',
+      'voucherRedeemed': 'Zrealizowany',
       'voucherCopied': 'Kod kuponu skopiowany do schowka',
       'voucherReadyToShare': 'Szczegóły kuponu skopiowane do schowka',
       'voucherMarkAsUsed': 'Oznacz jako użyty',
@@ -300,6 +305,7 @@ class AppLocalizations {
       'relativeDays': '{count} dni temu',
       'photoAdded': 'Zdjęcie dodane',
       'tapToAdd': 'Dotknij, aby dodać',
+      'tapToCopy': 'Dotknij, aby skopiować',
       'storeLoadFailed': 'Nie udało się wczytać sklepów: {error}',
       'selectStore': 'Wybierz sklep, aby kontynuować.',
       'productNamePrompt': 'Podaj nazwę produktu.',
@@ -427,6 +433,8 @@ class AppLocalizations {
   String get languageEnglish => _lookup('languageEnglish');
   String get languagePolish => _lookup('languagePolish');
   String get voucherExpired => _lookup('voucherExpired');
+  String get voucherReadyToUse => _lookup('voucherReadyToUse');
+  String get voucherRedeemed => _lookup('voucherRedeemed');
   String get voucherCopied => _lookup('voucherCopied');
   String get voucherReadyToShare => _lookup('voucherReadyToShare');
   String get voucherMarkAsUsed => _lookup('voucherMarkAsUsed');
@@ -442,6 +450,7 @@ class AppLocalizations {
   String get cancel => _lookup('cancel');
   String get photoAdded => _lookup('photoAdded');
   String get tapToAdd => _lookup('tapToAdd');
+  String get tapToCopy => _lookup('tapToCopy');
   String get selectStore => _lookup('selectStore');
   String get productNamePrompt => _lookup('productNamePrompt');
   String get addPhotosPrompt => _lookup('addPhotosPrompt');

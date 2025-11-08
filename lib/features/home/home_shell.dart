@@ -4,6 +4,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter/services.dart';
 import 'dart:typed_data';
 import 'package:image_picker/image_picker.dart';
+import 'package:flutter/scheduler.dart' show TickerCanceled;
 
 import 'package:claimy/core/localization/localization_extensions.dart';
 import 'package:claimy/core/theme/app_colors.dart';
@@ -1955,18 +1956,36 @@ class _VoucherCardState extends State<VoucherCard>
   void _toggleUsed() async {
     final appState = context.read<AppState>();
     final markAsUsed = !widget.voucher.used;
-    // Animate the toggle
-    await _controller.forward();
+    final messenger = ScaffoldMessenger.of(context);
+    final usedMessage = context.l10n.voucherMarkedAsUsed;
+
+    try {
+      await _controller.forward();
+    } on TickerCanceled {
+      // Widget was disposed mid-animation; abort.
+      return;
+    }
+
     await appState.toggleVoucherUsed(widget.voucher.id);
-    await _controller.reverse();
-    if (!mounted || !markAsUsed) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(context.l10n.voucherMarkedAsUsed),
-        duration: const Duration(seconds: 2),
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
+
+    if (mounted) {
+      try {
+        await _controller.reverse();
+      } on TickerCanceled {
+        // Animation was cancelled; nothing else to do.
+      }
+    }
+
+    if (!markAsUsed) return;
+    messenger
+      ..removeCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(usedMessage),
+          duration: const Duration(seconds: 2),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
   }
 
   @override

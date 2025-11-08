@@ -994,41 +994,6 @@ class _RewardsViewState extends State<RewardsView> {
 
     return Column(
       children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 24, 16, 0),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: [
-                BoxShadow(
-                  color: fadeColor(Colors.black, 0.05),
-                  blurRadius: 14,
-                  offset: const Offset(0, 6),
-                ),
-              ],
-            ),
-            child: Row(
-              children: [
-                const Icon(
-                  Icons.card_giftcard_rounded,
-                  color: AppColors.accent,
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    context.l10n.rewardsIntro,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: fadeColor(AppColors.textPrimary, 0.7),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(height: 16),
         // Filter chips
         if (allVouchers.isNotEmpty)
           Padding(
@@ -2062,10 +2027,10 @@ class _VoucherCardState extends State<VoucherCard>
         opacity: _fadeAnimation,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
-          margin: const EdgeInsets.only(bottom: 14),
+          margin: const EdgeInsets.only(bottom: 10),
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(24),
+            borderRadius: BorderRadius.circular(18),
             border: Border.all(color: borderColor, width: 1.4),
             boxShadow: [
               BoxShadow(
@@ -2078,7 +2043,7 @@ class _VoucherCardState extends State<VoucherCard>
               ),
             ],
           ),
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -2097,7 +2062,7 @@ class _VoucherCardState extends State<VoucherCard>
                                 color: AppColors.textPrimary,
                               ),
                         ),
-                        const SizedBox(height: 4),
+                        const SizedBox(height: 2),
                         Text(
                           widget.voucher.amountLabel,
                           style: Theme.of(
@@ -2124,12 +2089,15 @@ class _VoucherCardState extends State<VoucherCard>
                         background: fadeColor(accent, 0.12),
                         foreground: accent,
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 6),
                       GestureDetector(
                         onTap: isExpired ? null : _toggleUsed,
                         child: AnimatedContainer(
                           duration: const Duration(milliseconds: 200),
-                          padding: const EdgeInsets.all(6),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(
@@ -2165,16 +2133,16 @@ class _VoucherCardState extends State<VoucherCard>
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 10),
               const Divider(height: 1, color: Color(0xFFE7E9F2)),
-              const SizedBox(height: 16),
+              const SizedBox(height: 10),
               Container(
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 14,
+                  horizontal: 14,
+                  vertical: 12,
                 ),
                 decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(12),
                   border: Border.all(
                     color: fadeColor(AppColors.textPrimary, 0.08),
                   ),
@@ -2193,16 +2161,16 @@ class _VoucherCardState extends State<VoucherCard>
                               'Voucher code',
                               style: TextStyle(
                                 color: mutedText,
-                                fontSize: 11,
-                                fontWeight: FontWeight.w600,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w500,
                               ),
                             ),
-                            const SizedBox(height: 4),
+                            const SizedBox(height: 2),
                             Text(
                               widget.voucher.code,
                               style: const TextStyle(
                                 fontFamily: 'Courier',
-                                fontSize: 20,
+                                fontSize: 16,
                                 fontWeight: FontWeight.w700,
                                 letterSpacing: 1.1,
                                 color: AppColors.textPrimary,
@@ -2212,11 +2180,11 @@ class _VoucherCardState extends State<VoucherCard>
                         ),
                       ),
                     ),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: 8),
                     GestureDetector(
                       onTap: () => _copyToClipboard(context),
                       child: Container(
-                        padding: const EdgeInsets.all(10),
+                        padding: const EdgeInsets.all(7),
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
                           color: fadeColor(AppColors.primary, 0.12),
@@ -2224,28 +2192,28 @@ class _VoucherCardState extends State<VoucherCard>
                         child: const Icon(
                           Icons.copy_rounded,
                           color: AppColors.primary,
-                          size: 18,
+                          size: 14,
                         ),
                       ),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 6),
               Row(
                 children: [
                   Icon(
                     isExpired ? Icons.error_outline : Icons.schedule,
-                    size: 16,
+                    size: 13,
                     color: isExpired ? AppColors.danger : mutedText,
                   ),
-                  const SizedBox(width: 6),
+                  const SizedBox(width: 4),
                   Text(
                     expiryLabel,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: isExpired ? AppColors.danger : mutedText,
-                      fontWeight: FontWeight.w600,
-                    ),
+                          color: isExpired ? AppColors.danger : mutedText,
+                          fontWeight: FontWeight.w500,
+                        ),
                   ),
                 ],
               ),
@@ -2273,7 +2241,7 @@ class _VoucherStatusChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
         color: background,
         borderRadius: BorderRadius.circular(999),
@@ -2282,14 +2250,14 @@ class _VoucherStatusChip extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 14, color: foreground),
+          Icon(icon, size: 12, color: foreground),
           const SizedBox(width: 4),
           Text(
             label,
             style: TextStyle(
               color: foreground,
               fontWeight: FontWeight.w600,
-              fontSize: 11,
+              fontSize: 10,
             ),
           ),
         ],

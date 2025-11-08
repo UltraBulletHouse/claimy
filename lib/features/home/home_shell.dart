@@ -4,7 +4,6 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter/services.dart';
 import 'dart:typed_data';
 import 'package:image_picker/image_picker.dart';
-import 'package:share_plus/share_plus.dart';
 
 import 'package:claimy/core/localization/localization_extensions.dart';
 import 'package:claimy/core/theme/app_colors.dart';
@@ -980,7 +979,7 @@ class _RewardsViewState extends State<RewardsView> {
   Widget build(BuildContext context) {
     final allVouchers = context.watch<AppState>().vouchers;
     final now = DateTime.now();
-    
+
     // Apply filter
     final filteredVouchers = allVouchers.where((v) {
       switch (_filter) {
@@ -1058,7 +1057,9 @@ class _RewardsViewState extends State<RewardsView> {
                   icon: Icons.schedule_rounded,
                   selected: _filter == VoucherFilter.expired,
                   onTap: () => setState(() => _filter = VoucherFilter.expired),
-                  count: allVouchers.where((v) => v.expiration.isBefore(now)).length,
+                  count: allVouchers
+                      .where((v) => v.expiration.isBefore(now))
+                      .length,
                   accent: AppColors.danger,
                 ),
               ],
@@ -1069,28 +1070,28 @@ class _RewardsViewState extends State<RewardsView> {
           child: allVouchers.isEmpty
               ? _RewardsEmptyState()
               : filteredVouchers.isEmpty
-                  ? _EmptyState(
-                      title: 'No vouchers found',
-                      subtitle: _filter == VoucherFilter.unused
-                          ? 'All vouchers have been used'
-                          : _filter == VoucherFilter.expired
-                              ? 'No expired vouchers'
-                              : 'No vouchers available',
-                    )
-                  : ListView.builder(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 8,
-                      ),
-                      itemCount: filteredVouchers.length,
-                      itemBuilder: (context, index) {
-                        final voucher = filteredVouchers[index];
-                        return VoucherCard(
-                          voucher: voucher,
-                          key: ValueKey(voucher.id),
-                        );
-                      },
-                    ),
+              ? _EmptyState(
+                  title: 'No vouchers found',
+                  subtitle: _filter == VoucherFilter.unused
+                      ? 'All vouchers have been used'
+                      : _filter == VoucherFilter.expired
+                      ? 'No expired vouchers'
+                      : 'No vouchers available',
+                )
+              : ListView.builder(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                  itemCount: filteredVouchers.length,
+                  itemBuilder: (context, index) {
+                    final voucher = filteredVouchers[index];
+                    return VoucherCard(
+                      voucher: voucher,
+                      key: ValueKey(voucher.id),
+                    );
+                  },
+                ),
         ),
       ],
     );
@@ -1163,7 +1164,10 @@ class _VoucherFilterChip extends StatelessWidget {
                 ),
                 const SizedBox(width: 4),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 2,
+                  ),
                   decoration: BoxDecoration(
                     color: selected
                         ? fadeColor(Colors.white, 0.3)
@@ -1221,17 +1225,17 @@ class _RewardsEmptyState extends StatelessWidget {
             Text(
               context.l10n.rewardsEmptyTitle,
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.textPrimary,
-                  ),
+                fontWeight: FontWeight.w700,
+                color: AppColors.textPrimary,
+              ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 12),
             Text(
               context.l10n.rewardsEmptyBody,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: fadeColor(AppColors.textPrimary, 0.6),
-                  ),
+                color: fadeColor(AppColors.textPrimary, 0.6),
+              ),
               textAlign: TextAlign.center,
             ),
           ],
@@ -1754,8 +1758,7 @@ class TimelineEntry extends StatelessWidget {
         ? context.l10n.timelineYou
         : context.l10n.timelineSupport;
     final timestampLabel = context.l10n.formatMediumDate(entry.timestamp);
-    final message =
-        entry.status.localizedNote(context.l10n, entry.note);
+    final message = entry.status.localizedNote(context.l10n, entry.note);
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: Row(
@@ -1971,7 +1974,8 @@ class VoucherCard extends StatefulWidget {
   State<VoucherCard> createState() => _VoucherCardState();
 }
 
-class _VoucherCardState extends State<VoucherCard> with SingleTickerProviderStateMixin {
+class _VoucherCardState extends State<VoucherCard>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _scaleAnimation;
   late Animation<double> _fadeAnimation;
@@ -1983,12 +1987,14 @@ class _VoucherCardState extends State<VoucherCard> with SingleTickerProviderStat
       duration: const Duration(milliseconds: 300),
       vsync: this,
     );
-    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.95).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
-    );
-    _fadeAnimation = Tween<double>(begin: 1.0, end: 0.7).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
-    );
+    _scaleAnimation = Tween<double>(
+      begin: 1.0,
+      end: 0.95,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
+    _fadeAnimation = Tween<double>(
+      begin: 1.0,
+      end: 0.7,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
   }
 
   @override
@@ -2002,41 +2008,6 @@ class _VoucherCardState extends State<VoucherCard> with SingleTickerProviderStat
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(context.l10n.voucherCopied),
-        duration: const Duration(seconds: 2),
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
-  }
-
-  void _shareVoucher(BuildContext context) async {
-    final text = 'Voucher code for ${widget.voucher.storeName}: ${widget.voucher.code}\nExpires: ${widget.voucher.expiration.toLocal().toString().split(' ')[0]}';
-    
-    try {
-      // Try to use native share API (works on mobile web and native apps)
-      final result = await Share.share(
-        text,
-        subject: 'Voucher for ${widget.voucher.storeName}',
-      );
-      
-      // If share was successful or dismissed, don't show snackbar
-      if (result.status == ShareResultStatus.success) {
-        // Share was successful, no need to show additional feedback
-        return;
-      } else if (result.status == ShareResultStatus.dismissed) {
-        // User dismissed the share dialog, no need to show feedback
-        return;
-      }
-      // If unavailable, fall through to clipboard fallback
-    } catch (e) {
-      // Share API not available, fall back to clipboard
-    }
-    
-    // Fallback: Copy to clipboard
-    await Clipboard.setData(ClipboardData(text: text));
-    if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(context.l10n.voucherReadyToShare),
         duration: const Duration(seconds: 2),
         behavior: SnackBarBehavior.floating,
       ),
@@ -2061,152 +2032,174 @@ class _VoucherCardState extends State<VoucherCard> with SingleTickerProviderStat
         : context.l10n.voucherExpires(expiresIn);
 
     final highlight = !widget.voucher.used && !isExpired;
-    const readyAccent = Color(0xFFFFB347); // midway orange/yellow for ready vouchers
+    const readyAccent = Color(
+      0xFFFFB347,
+    ); // midway orange/yellow for ready vouchers
     final Color borderColor = highlight
         ? fadeColor(readyAccent, 0.5)
         : isExpired
-            ? fadeColor(AppColors.danger, 0.35)
-            : fadeColor(AppColors.textPrimary, 0.15);
+        ? fadeColor(AppColors.danger, 0.35)
+        : fadeColor(AppColors.textPrimary, 0.15);
     final Color mutedText = fadeColor(AppColors.textPrimary, 0.65);
     final Color accent = isExpired
         ? AppColors.danger
         : widget.voucher.used
-            ? AppColors.success
-            : readyAccent;
+        ? AppColors.success
+        : readyAccent;
 
     return ScaleTransition(
       scale: _scaleAnimation,
       child: FadeTransition(
         opacity: _fadeAnimation,
-        child: GestureDetector(
-          onTap: () => _copyToClipboard(context),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            margin: const EdgeInsets.only(bottom: 14),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: borderColor, width: 1.4),
-              boxShadow: [
-                BoxShadow(
-                  color: fadeColor(highlight ? readyAccent : Colors.black, highlight ? 0.2 : 0.04),
-                  blurRadius: highlight ? 22 : 14,
-                  offset: const Offset(0, 10),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          margin: const EdgeInsets.only(bottom: 14),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: borderColor, width: 1.4),
+            boxShadow: [
+              BoxShadow(
+                color: fadeColor(
+                  highlight ? readyAccent : Colors.black,
+                  highlight ? 0.2 : 0.04,
                 ),
-              ],
-            ),
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    SizedBox(
-                      width: 50,
-                      height: 50,
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(18),
-                        child: DecoratedBox(
-                          decoration: BoxDecoration(
-                            color: fadeColor(AppColors.primary, 0.08),
-                          ),
-                          child: Center(
-                            child: Text(
-                              toInitial(widget.voucher.storeName),
-                              style: const TextStyle(
-                                color: AppColors.primary,
-                                fontWeight: FontWeight.w700,
-                                fontSize: 18,
-                              ),
+                blurRadius: highlight ? 22 : 14,
+                offset: const Offset(0, 10),
+              ),
+            ],
+          ),
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SizedBox(
+                    width: 50,
+                    height: 50,
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(18),
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: fadeColor(AppColors.primary, 0.08),
+                        ),
+                        child: Center(
+                          child: Text(
+                            toInitial(widget.voucher.storeName),
+                            style: const TextStyle(
+                              color: AppColors.primary,
+                              fontWeight: FontWeight.w700,
+                              fontSize: 18,
                             ),
                           ),
                         ),
                       ),
                     ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            widget.voucher.storeName,
-                            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                  fontWeight: FontWeight.w700,
-                                  color: AppColors.textPrimary,
-                                ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            widget.voucher.amountLabel,
-                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                  color: mutedText,
-                                ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _VoucherStatusChip(
-                          icon: isExpired
-                              ? Icons.timer_off_rounded
-                              : widget.voucher.used
-                                  ? Icons.verified_rounded
-                                  : Icons.flash_on_rounded,
-                          label: isExpired
-                              ? context.l10n.voucherExpired
-                              : widget.voucher.used
-                                  ? context.l10n.voucherRedeemed
-                                  : context.l10n.voucherReadyToUse,
-                          background: fadeColor(accent, 0.12),
-                          foreground: accent,
+                        Text(
+                          widget.voucher.storeName,
+                          style: Theme.of(context).textTheme.titleMedium
+                              ?.copyWith(
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.textPrimary,
+                              ),
                         ),
-                        const SizedBox(height: 8),
-                        GestureDetector(
-                          onTap: isExpired ? null : _toggleUsed,
-                          child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 200),
-                            padding: const EdgeInsets.all(6),
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                color: isExpired ? fadeColor(AppColors.textPrimary, 0.2) : accent,
-                              ),
-                              color: isExpired
-                                  ? Colors.white
-                                  : fadeColor(accent, widget.voucher.used ? 0.08 : 0.15),
-                            ),
-                            child: AnimatedSwitcher(
-                              duration: const Duration(milliseconds: 200),
-                              transitionBuilder: (child, animation) => ScaleTransition(scale: animation, child: child),
-                              child: Icon(
-                                widget.voucher.used ? Icons.check_rounded : Icons.circle_outlined,
-                                key: ValueKey(widget.voucher.used),
-                                size: 18,
-                                color: widget.voucher.used ? AppColors.success : accent,
-                              ),
-                            ),
-                          ),
+                        const SizedBox(height: 4),
+                        Text(
+                          widget.voucher.amountLabel,
+                          style: Theme.of(
+                            context,
+                          ).textTheme.bodyMedium?.copyWith(color: mutedText),
                         ),
                       ],
                     ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                const Divider(height: 1, color: Color(0xFFE7E9F2)),
-                const SizedBox(height: 16),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: fadeColor(AppColors.textPrimary, 0.08)),
-                    color: fadeColor(AppColors.textPrimary, 0.04),
                   ),
-                  child: Row(
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
-                      Expanded(
+                      _VoucherStatusChip(
+                        icon: isExpired
+                            ? Icons.timer_off_rounded
+                            : widget.voucher.used
+                            ? Icons.verified_rounded
+                            : Icons.flash_on_rounded,
+                        label: isExpired
+                            ? context.l10n.voucherExpired
+                            : widget.voucher.used
+                            ? context.l10n.voucherRedeemed
+                            : context.l10n.voucherReadyToUse,
+                        background: fadeColor(accent, 0.12),
+                        foreground: accent,
+                      ),
+                      const SizedBox(height: 8),
+                      GestureDetector(
+                        onTap: isExpired ? null : _toggleUsed,
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: isExpired
+                                  ? fadeColor(AppColors.textPrimary, 0.2)
+                                  : accent,
+                            ),
+                            color: isExpired
+                                ? Colors.white
+                                : fadeColor(
+                                    accent,
+                                    widget.voucher.used ? 0.08 : 0.15,
+                                  ),
+                          ),
+                          child: AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 200),
+                            transitionBuilder: (child, animation) =>
+                                ScaleTransition(scale: animation, child: child),
+                            child: Icon(
+                              widget.voucher.used
+                                  ? Icons.check_rounded
+                                  : Icons.circle_outlined,
+                              key: ValueKey(widget.voucher.used),
+                              size: 18,
+                              color: widget.voucher.used
+                                  ? AppColors.success
+                                  : accent,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              const Divider(height: 1, color: Color(0xFFE7E9F2)),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 14,
+                ),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: fadeColor(AppColors.textPrimary, 0.08),
+                  ),
+                  color: fadeColor(AppColors.textPrimary, 0.04),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTap: () => _copyToClipboard(context),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -2232,60 +2225,45 @@ class _VoucherCardState extends State<VoucherCard> with SingleTickerProviderStat
                           ],
                         ),
                       ),
-                      const SizedBox(width: 12),
-                      GestureDetector(
-                        onTap: () => _shareVoucher(context),
-                        child: Container(
-                          padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: fadeColor(AppColors.primary, 0.12),
-                          ),
-                          child: const Icon(
-                            Icons.ios_share_rounded,
-                            color: AppColors.primary,
-                            size: 18,
-                          ),
+                    ),
+                    const SizedBox(width: 12),
+                    GestureDetector(
+                      onTap: () => _copyToClipboard(context),
+                      child: Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: fadeColor(AppColors.primary, 0.12),
                         ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Icon(
-                      isExpired ? Icons.error_outline : Icons.schedule,
-                      size: 16,
-                      color: isExpired ? AppColors.danger : mutedText,
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      expiryLabel,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: isExpired ? AppColors.danger : mutedText,
-                            fontWeight: FontWeight.w600,
-                          ),
-                    ),
-                    const Spacer(),
-                    Icon(
-                      Icons.copy_rounded,
-                      size: 14,
-                      color: mutedText,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      context.l10n.tapToCopy,
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: mutedText,
-                        fontStyle: FontStyle.italic,
+                        child: const Icon(
+                          Icons.copy_rounded,
+                          color: AppColors.primary,
+                          size: 18,
+                        ),
                       ),
                     ),
                   ],
                 ),
-              ],
-            ),
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Icon(
+                    isExpired ? Icons.error_outline : Icons.schedule,
+                    size: 16,
+                    color: isExpired ? AppColors.danger : mutedText,
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    expiryLabel,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: isExpired ? AppColors.danger : mutedText,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
         ),
       ),
@@ -2523,8 +2501,10 @@ class _PendingRequestCardState extends State<PendingRequestCard> {
   @override
   Widget build(BuildContext context) {
     final rawMessage = widget.request.message.trim();
-    final message =
-        CaseStatus.needsInfo.localizedNote(context.l10n, rawMessage);
+    final message = CaseStatus.needsInfo.localizedNote(
+      context.l10n,
+      rawMessage,
+    );
 
     return Container(
       padding: const EdgeInsets.all(20),

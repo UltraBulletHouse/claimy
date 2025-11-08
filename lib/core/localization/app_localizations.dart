@@ -146,7 +146,6 @@ class AppLocalizations {
       'relativeDays': '{count} d ago',
       'photoAdded': 'Photo added',
       'tapToAdd': 'Tap to add',
-      'tapToCopy': 'Tap to copy',
       'storeLoadFailed': 'Failed to load stores: {error}',
       'selectStore': 'Select a store to continue.',
       'productNamePrompt': 'Tell us the product name.',
@@ -305,7 +304,6 @@ class AppLocalizations {
       'relativeDays': '{count} dni temu',
       'photoAdded': 'Zdjęcie dodane',
       'tapToAdd': 'Dotknij, aby dodać',
-      'tapToCopy': 'Dotknij, aby skopiować',
       'storeLoadFailed': 'Nie udało się wczytać sklepów: {error}',
       'selectStore': 'Wybierz sklep, aby kontynuować.',
       'productNamePrompt': 'Podaj nazwę produktu.',
@@ -450,7 +448,6 @@ class AppLocalizations {
   String get cancel => _lookup('cancel');
   String get photoAdded => _lookup('photoAdded');
   String get tapToAdd => _lookup('tapToAdd');
-  String get tapToCopy => _lookup('tapToCopy');
   String get selectStore => _lookup('selectStore');
   String get productNamePrompt => _lookup('productNamePrompt');
   String get addPhotosPrompt => _lookup('addPhotosPrompt');

@@ -2016,10 +2016,19 @@ class _VoucherCardState extends State<VoucherCard>
 
   void _toggleUsed() async {
     final appState = context.read<AppState>();
+    final markAsUsed = !widget.voucher.used;
     // Animate the toggle
     await _controller.forward();
     await appState.toggleVoucherUsed(widget.voucher.id);
     await _controller.reverse();
+    if (!mounted || !markAsUsed) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(context.l10n.voucherMarkedAsUsed),
+        duration: const Duration(seconds: 2),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
   }
 
   @override

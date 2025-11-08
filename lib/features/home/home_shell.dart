@@ -2085,29 +2085,6 @@ class _VoucherCardState extends State<VoucherCard>
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  SizedBox(
-                    width: 50,
-                    height: 50,
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(18),
-                      child: DecoratedBox(
-                        decoration: BoxDecoration(
-                          color: fadeColor(AppColors.primary, 0.08),
-                        ),
-                        child: Center(
-                          child: Text(
-                            toInitial(widget.voucher.storeName),
-                            style: const TextStyle(
-                              color: AppColors.primary,
-                              fontWeight: FontWeight.w700,
-                              fontSize: 18,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 14),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,

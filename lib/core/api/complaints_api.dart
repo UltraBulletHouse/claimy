@@ -9,7 +9,11 @@ class ComplaintsApi {
   ComplaintsApi({String? baseUrl}) : _baseUrl = baseUrl ?? _detectBaseUrl();
 
   // Fetch only the current user's cases
-  Future<GetCasesResult> getCases({int limit = 50, int offset = 0, String sort = '-createdAt'}) async {
+  Future<GetCasesResult> getCases({
+    int limit = 50,
+    int offset = 0,
+    String sort = '-createdAt',
+  }) async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
       throw SubmitException('Not authenticated', statusCode: 401);
@@ -17,7 +21,9 @@ class ComplaintsApi {
     final idToken = await user.getIdToken(true);
 
     final resp = await http.get(
-      _url('/cases?limit=$limit&offset=$offset&sort=${Uri.encodeQueryComponent(sort)}'),
+      _url(
+        '/cases?limit=$limit&offset=$offset&sort=${Uri.encodeQueryComponent(sort)}',
+      ),
       headers: {
         'Accept': 'application/json',
         'Authorization': 'Bearer $idToken',
@@ -39,7 +45,8 @@ class ComplaintsApi {
     String message;
     try {
       final data = jsonDecode(resp.body) as Map<String, dynamic>;
-      message = data['error']?.toString() ?? 'Request failed (${resp.statusCode})';
+      message =
+          data['error']?.toString() ?? 'Request failed (${resp.statusCode})';
     } catch (_) {
       message = 'Request failed (${resp.statusCode})';
     }
@@ -83,7 +90,8 @@ class ComplaintsApi {
                 name.isNotEmpty &&
                 primaryColor.isNotEmpty &&
                 email.isNotEmpty) {
-              final secondaryColor = (secondaryColorRaw != null && secondaryColorRaw.isNotEmpty)
+              final secondaryColor =
+                  (secondaryColorRaw != null && secondaryColorRaw.isNotEmpty)
                   ? secondaryColorRaw
                   : primaryColor;
               stores.add(
@@ -130,6 +138,10 @@ class ComplaintsApi {
 
   static const String _productionBaseUrl = 'https://claimy-backend.vercel.app';
 
+  static String resolveBaseUrl() {
+    return _detectBaseUrl();
+  }
+
   static bool get _isAndroid {
     try {
       return Platform.isAndroid;
@@ -149,7 +161,7 @@ class ComplaintsApi {
       throw SubmitException('Not authenticated', statusCode: 401);
     }
     final idToken = await user.getIdToken(true);
-    
+
     final resp = await http.patch(
       _url('/cases/$caseId/voucher-used'),
       headers: {
@@ -158,9 +170,12 @@ class ComplaintsApi {
       },
       body: jsonEncode({'used': used}),
     );
-    
+
     if (resp.statusCode < 200 || resp.statusCode >= 300) {
-      throw SubmitException('Request failed (${resp.statusCode})', statusCode: resp.statusCode);
+      throw SubmitException(
+        'Request failed (${resp.statusCode})',
+        statusCode: resp.statusCode,
+      );
     }
   }
 
@@ -187,12 +202,19 @@ class ComplaintsApi {
         request.fields['answer'] = answer.trim();
       }
       request.files.add(
-        http.MultipartFile.fromBytes('attachment', attachmentBytes, filename: 'attachment.jpg'),
+        http.MultipartFile.fromBytes(
+          'attachment',
+          attachmentBytes,
+          filename: 'attachment.jpg',
+        ),
       );
       final streamed = await request.send();
       final resp = await http.Response.fromStream(streamed);
       if (resp.statusCode < 200 || resp.statusCode >= 300) {
-        throw SubmitException('Request failed (${resp.statusCode})', statusCode: resp.statusCode);
+        throw SubmitException(
+          'Request failed (${resp.statusCode})',
+          statusCode: resp.statusCode,
+        );
       }
     } else {
       final body = <String, dynamic>{};
@@ -211,7 +233,10 @@ class ComplaintsApi {
         body: jsonEncode(body),
       );
       if (resp.statusCode < 200 || resp.statusCode >= 300) {
-        throw SubmitException('Request failed (${resp.statusCode})', statusCode: resp.statusCode);
+        throw SubmitException(
+          'Request failed (${resp.statusCode})',
+          statusCode: resp.statusCode,
+        );
       }
     }
   }
@@ -270,7 +295,8 @@ class ComplaintsApi {
     String message;
     try {
       final data = jsonDecode(resp.body) as Map<String, dynamic>;
-      message = data['error']?.toString() ?? 'Request failed (${resp.statusCode})';
+      message =
+          data['error']?.toString() ?? 'Request failed (${resp.statusCode})';
     } catch (e) {
       // ignore: avoid_print
       print('[ComplaintsApi.submitComplaint] error JSON parse: $e');
@@ -281,10 +307,15 @@ class ComplaintsApi {
 }
 
 class GetCasesResult {
- GetCasesResult({required this.items, required this.total, required this.limit, required this.offset});
- final List<Map<String, dynamic>> items;
- final int total;
- final int limit;
+  GetCasesResult({
+    required this.items,
+    required this.total,
+    required this.limit,
+    required this.offset,
+  });
+  final List<Map<String, dynamic>> items;
+  final int total;
+  final int limit;
   final int offset;
 }
 
@@ -307,19 +338,21 @@ class StoreCatalogEntry {
     return StoreCatalogEntry(
       storeId: (json['storeId'] ?? json['store_id'] ?? '').toString(),
       name: (json['name'] ?? '').toString(),
-      primaryColor: (json['primaryColor'] ?? json['primary_color'] ?? '').toString(),
-      secondaryColor: (json['secondaryColor'] ?? json['secondary_color'] ?? '').toString(),
+      primaryColor: (json['primaryColor'] ?? json['primary_color'] ?? '')
+          .toString(),
+      secondaryColor: (json['secondaryColor'] ?? json['secondary_color'] ?? '')
+          .toString(),
       email: (json['email'] ?? '').toString(),
     );
   }
 
   Map<String, dynamic> toJson() => <String, dynamic>{
-        'storeId': storeId,
-        'name': name,
-        'primaryColor': primaryColor,
-        'secondaryColor': secondaryColor,
-        'email': email,
-      };
+    'storeId': storeId,
+    'name': name,
+    'primaryColor': primaryColor,
+    'secondaryColor': secondaryColor,
+    'email': email,
+  };
 }
 
 class SubmitResult {

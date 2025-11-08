@@ -9,12 +9,15 @@ import 'package:claimy/features/home/home_shell.dart';
 import 'package:claimy/state/app_state.dart';
 
 class ClaimyApp extends StatelessWidget {
-  const ClaimyApp({super.key});
+  const ClaimyApp({super.key, required this.navigatorKey});
+
+  final GlobalKey<NavigatorState> navigatorKey;
 
   @override
   Widget build(BuildContext context) {
     final locale = context.watch<AppState>().locale;
     return MaterialApp(
+      navigatorKey: navigatorKey,
       onGenerateTitle: (context) => AppLocalizations.of(context).appTitle,
       debugShowCheckedModeBanner: false,
       localizationsDelegates: const [

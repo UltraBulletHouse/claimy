@@ -9,6 +9,7 @@ import 'package:claimy/core/api/complaints_api.dart';
 import 'package:claimy/core/localization/app_localizations.dart';
 import 'package:claimy/core/theme/app_colors.dart';
 import 'package:claimy/services/auth_service.dart';
+import 'package:claimy/services/push_notifications_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 enum CaseStatus { pending, inReview, needsInfo, approved, rejected }
@@ -258,11 +259,17 @@ class AppState extends ChangeNotifier {
   static const String _casesCacheKeyPrefix = 'app_state.cases';
   static const String _storesCacheKeyPrefix = 'app_state.stores';
   static const String _localeStorageKey = 'app_state.locale';
+  static const String _unreadCasesKeyPrefix = 'app_state.unread_cases';
 
-  AppState({Locale? initialLocale}) : _locale = initialLocale ?? const Locale('en') {
+  AppState({
+    Locale? initialLocale,
+    PushNotificationsService? pushNotificationsService,
+  }) : _locale = initialLocale ?? const Locale('en'),
+       _pushNotifications = pushNotificationsService {
     unawaited(_loadLocale());
     _authService = AuthService();
     _api = ComplaintsApi();
+    _pushNotifications?.registerCaseUpdateHandler(_handleRemoteCaseUpdate);
     _authSub = _authService.authStateChanges().listen((user) {
       final previousUser = _currentUser;
       _currentUser = user;
@@ -273,12 +280,15 @@ class AppState extends ChangeNotifier {
           // Immediately notify so UI can transition to HomeShell
           notifyListeners();
           if (user != null) {
+            _pushNotifications?.onUserAuthenticated(user);
             unawaited(_restoreCachesForUser(user.uid));
+            unawaited(_loadUnreadFlagsForUser(user.uid));
           }
           // Load cases in the background; UI is already switched
           refreshCasesFromServer();
           refreshStoresFromServer(force: true);
         } else {
+          unawaited(_pushNotifications?.onUserSignedOut());
           _resetCasesState();
           _clearStoresState();
           notifyListeners();
@@ -292,6 +302,7 @@ class AppState extends ChangeNotifier {
 
   late final AuthService _authService;
   late final ComplaintsApi _api;
+  final PushNotificationsService? _pushNotifications;
   StreamSubscription? _authSub;
   User? _currentUser;
   Locale _locale;
@@ -307,6 +318,7 @@ class AppState extends ChangeNotifier {
   DateTime? _storesFetchedAt;
   bool _isAuthenticated = false;
   HomeLanding _landingPreference = HomeLanding.cases;
+  final Set<String> _unreadCaseIds = <String>{};
 
   bool get isAuthenticated => _isAuthenticated;
   HomeLanding get landingPreference => _landingPreference;
@@ -389,10 +401,23 @@ class AppState extends ChangeNotifier {
 
   void markCaseUpdatesRead(String id) {
     final caseModel = caseById(id);
+    var changed = false;
     if (caseModel != null && caseModel.hasUnreadUpdates) {
       caseModel.hasUnreadUpdates = false;
+      changed = true;
+    }
+    if (_unreadCaseIds.remove(id) || changed) {
+      unawaited(_persistUnreadFlags());
       notifyListeners();
     }
+  }
+
+  Future<void> _handleRemoteCaseUpdate(String caseId) async {
+    if (!_isAuthenticated) {
+      return;
+    }
+    _markCaseHasUnread(caseId);
+    await refreshCasesFromServer();
   }
 
   void setLocale(Locale locale) {
@@ -401,11 +426,13 @@ class AppState extends ChangeNotifier {
     }
     _locale = locale;
     notifyListeners();
-    SharedPreferences.getInstance().then((prefs) {
-      prefs.setString(_localeStorageKey, locale.languageCode);
-    }).catchError((_) {
-      // ignore persistence errors
-    });
+    SharedPreferences.getInstance()
+        .then((prefs) {
+          prefs.setString(_localeStorageKey, locale.languageCode);
+        })
+        .catchError((_) {
+          // ignore persistence errors
+        });
   }
 
   Future<void> signInWithGoogle() async {
@@ -449,7 +476,70 @@ class AppState extends ChangeNotifier {
     _cases.clear();
     _casesError = null;
     _isLoadingCases = false;
+    _unreadCaseIds.clear();
   }
+
+  void _markCaseHasUnread(String caseId) {
+    final added = _unreadCaseIds.add(caseId);
+    final caseModel = caseById(caseId);
+    if (caseModel != null) {
+      caseModel.hasUnreadUpdates = true;
+    }
+    if (added) {
+      unawaited(_persistUnreadFlags());
+      notifyListeners();
+    }
+  }
+
+  Future<void> _persistUnreadFlags() async {
+    final uid = _currentUser?.uid;
+    if (uid == null) {
+      return;
+    }
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(
+        _unreadCasesCacheKey(uid),
+        jsonEncode(_unreadCaseIds.toList()),
+      );
+    } catch (_) {
+      // Ignore persistence failures; they'll be repopulated on the next event.
+    }
+  }
+
+  Future<void> _loadUnreadFlagsForUser(String uid) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final stored = prefs.getString(_unreadCasesCacheKey(uid));
+      _unreadCaseIds.clear();
+      if (stored != null && stored.isNotEmpty) {
+        final decoded = jsonDecode(stored);
+        if (decoded is List) {
+          for (final entry in decoded) {
+            if (entry is String && entry.isNotEmpty) {
+              _unreadCaseIds.add(entry);
+            }
+          }
+        }
+      }
+      _applyUnreadFlags();
+      notifyListeners();
+    } catch (_) {
+      _unreadCaseIds.clear();
+    }
+  }
+
+  void _applyUnreadFlags() {
+    if (_cases.isEmpty) {
+      return;
+    }
+    for (final caseModel in _cases) {
+      caseModel.hasUnreadUpdates = _unreadCaseIds.contains(caseModel.id);
+    }
+  }
+
+  String _unreadCasesCacheKey(String uid) => '$_unreadCasesKeyPrefix.$uid';
 
   void _clearStoresState() {
     _stores.clear();
@@ -529,10 +619,11 @@ class AppState extends ChangeNotifier {
       _cases
         ..clear()
         ..addAll(result.items.map(_mapServerCaseToModel));
-      
+      _applyUnreadFlags();
+
       // Extract vouchers from approved cases
       _extractVouchersFromCases(result.items);
-      
+
       _casesError = null;
       final fetchedAt = DateTime.now();
       _casesFetchedAt = fetchedAt;
@@ -550,30 +641,33 @@ class AppState extends ChangeNotifier {
 
   void _extractVouchersFromCases(List<Map<String, dynamic>> rawCases) {
     _vouchers.clear();
-    
+
     for (final caseData in rawCases) {
       final statusStr = (caseData['status'] ?? '').toString().toUpperCase();
       if (statusStr != 'APPROVED') continue;
-      
+
       final resolution = caseData['resolution'];
       if (resolution == null || resolution is! Map) continue;
-      
+
       final code = resolution['code']?.toString();
       if (code == null || code.isEmpty) continue;
-      
+
       final expiryStr = resolution['expiryDate']?.toString();
       if (expiryStr == null || expiryStr.isEmpty) continue;
-      
+
       final expiry = DateTime.tryParse(expiryStr);
       if (expiry == null) continue;
-      
+
       final caseId = (caseData['id'] ?? caseData['_id'] ?? '').toString();
-      final storeName = (caseData['store'] ?? caseData['storeName'] ?? 'Store').toString();
-      final productName = (caseData['product'] ?? caseData['productName'] ?? 'Product').toString();
-      
+      final storeName = (caseData['store'] ?? caseData['storeName'] ?? 'Store')
+          .toString();
+      final productName =
+          (caseData['product'] ?? caseData['productName'] ?? 'Product')
+              .toString();
+
       // Check if voucher is already marked as used (we'll store this in resolution)
       final used = resolution['used'] == true;
-      
+
       _vouchers.add(
         Voucher(
           id: caseId,
@@ -626,7 +720,9 @@ class AppState extends ChangeNotifier {
     try {
       final prefs = await SharedPreferences.getInstance();
       final stored = prefs.getString(_localeStorageKey);
-      if (stored != null && stored.isNotEmpty && stored != _locale.languageCode) {
+      if (stored != null &&
+          stored.isNotEmpty &&
+          stored != _locale.languageCode) {
         _locale = Locale(stored);
         notifyListeners();
       }
@@ -658,10 +754,11 @@ class AppState extends ChangeNotifier {
             _cases
               ..clear()
               ..addAll(rawCases.map(_mapServerCaseToModel));
-            
+
             // Extract vouchers from cached cases
             _extractVouchersFromCases(rawCases);
-            
+            _applyUnreadFlags();
+
             _casesError = null;
             updated = true;
           }
@@ -806,8 +903,7 @@ class AppState extends ChangeNotifier {
         timestamp: at,
         isCustomerAction: false,
       );
-    }).toList()
-      ..sort((a, b) => a.timestamp.compareTo(b.timestamp));
+    }).toList()..sort((a, b) => a.timestamp.compareTo(b.timestamp));
 
     // Ensure there's an initial submitted entry at createdAt
     final hasSubmitted = timeline.any((e) => e.status == CaseStatus.pending);
@@ -895,12 +991,12 @@ class AppState extends ChangeNotifier {
       (v) => v.id == id,
       orElse: () => throw ArgumentError('Voucher not found'),
     );
-    
+
     // Toggle locally first for instant UI feedback
     final newUsedState = !voucher.used;
     voucher.used = newUsedState;
     notifyListeners();
-    
+
     // Persist to server
     try {
       await _api.updateVoucherUsedStatus(caseId: id, used: newUsedState);
@@ -910,5 +1006,12 @@ class AppState extends ChangeNotifier {
       notifyListeners();
       // Could show error to user here
     }
+  }
+
+  @override
+  void dispose() {
+    _authSub?.cancel();
+    unawaited(_pushNotifications?.onUserSignedOut());
+    super.dispose();
   }
 }

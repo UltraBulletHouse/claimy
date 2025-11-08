@@ -1039,8 +1039,8 @@ class _RewardsViewState extends State<RewardsView> {
                   subtitle: _filter == VoucherFilter.used
                       ? 'No redeemed vouchers yet'
                       : _filter == VoucherFilter.unused
-                          ? 'All vouchers have been used'
-                          : 'No expired vouchers',
+                      ? 'All vouchers have been used'
+                      : 'No expired vouchers',
                 )
               : ListView.builder(
                   padding: const EdgeInsets.symmetric(
@@ -1416,14 +1416,6 @@ class CaseDetailScreen extends StatefulWidget {
 }
 
 class _CaseDetailScreenState extends State<CaseDetailScreen> {
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<AppState>().markCaseUpdatesRead(widget.caseId);
-    });
-  }
-
   void _answerQuestion(String response) {
     context.read<AppState>().respondToAdditionalInfoServer(
       widget.caseId,
@@ -1439,6 +1431,13 @@ class _CaseDetailScreenState extends State<CaseDetailScreen> {
     final caseModel = context.select<AppState, CaseModel?>(
       (state) => state.caseById(widget.caseId),
     );
+
+    if (caseModel?.hasUnreadUpdates == true) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        context.read<AppState>().markCaseUpdatesRead(widget.caseId);
+      });
+    }
 
     if (caseModel == null) {
       return Scaffold(body: Center(child: Text(context.l10n.caseNotFound)));
@@ -2200,9 +2199,9 @@ class _VoucherCardState extends State<VoucherCard>
                   Text(
                     expiryLabel,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: isExpired ? AppColors.danger : mutedText,
-                          fontWeight: FontWeight.w500,
-                        ),
+                      color: isExpired ? AppColors.danger : mutedText,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                 ],
               ),
